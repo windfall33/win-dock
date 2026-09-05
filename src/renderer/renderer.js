@@ -639,14 +639,12 @@ function layoutTick() {
   for (const s of arr) {
     const tgt = s.targetScale == null ? 1 : s.targetScale;
     if (s.vel == null) s.vel = 0;
-    // 弹簧阻尼（macOS 手感）：轻微过冲后弹回，比纯 lerp 多一层「物理」；
-    // 半隐式欧拉稳定，收敛阈值内硬着陆保证 settled 判定可靠
-    const stiff = 0.26, damp = 0.58;
-    s.vel = (s.vel + (tgt - s.cur.scale) * stiff) * damp;
-    s.cur.scale += s.vel;
-    if (Math.abs(tgt - s.cur.scale) < 0.0015 && Math.abs(s.vel) < 0.0015) {
-      s.cur.scale = tgt; s.vel = 0;
-    }
+    // 弹簧阻尼（macOS 手感）：轻微过冲后弹回，比纯 lerp 多一层「物理」。
+    // P2-F1a：积分逻辑下沉 core/spring.js（半隐式欧拉），鱼眼与拖拽避让共用；
+    // 参数 0.26/0.58 与硬着陆阈值不变 —— 行为零变化的纯平移。
+    const st = Spring.stepSpring(s.cur.scale, s.vel, tgt, 0.26, 0.58);
+    s.cur.scale = st.pos;
+    s.vel = st.vel;
   }
 
   const vert = isVert();
