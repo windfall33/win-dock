@@ -35,6 +35,42 @@
 | 文件夹 Stack（固定文件夹、点击展开、拖文件入栈） | ✅ |
 | DWM 级实时缩略图（Live Thumbnail，随窗口内容动态刷新） | ❌ 平台限制 |
 
+## 下载与运行说明（开源，为什么 Windows 会拦截安装包）
+
+本项目采用 MIT 协议开源，源码完全公开可审计。仓库与「是否被 Windows 拦截」
+是两回事：Windows SmartScreen 只评估**下载的 exe 本身**（有没有代码签名、
+信誉库里的下载量），不会因为代码开源就放行。
+
+当前 Release 的安装包尚未购买代码签名证书，所以部分用户首次下载运行会看到
+「Windows 已保护你的电脑」提示。这不是病毒，处理方式：
+
+- 在拦截页点「更多信息 → 仍要运行」；
+- 或改用便携版 zip（一般不会被拦），解压后如仍提示，右键 exe → 属性 →
+  勾选「解除锁定」；
+- 等后续购买代码签名证书或上架 Microsoft Store 后，此提示会消失。
+
+### 从源码运行（信任/想折腾源码的用户）
+
+需要 Windows 10/11、Node.js 18+（npm 随 Node 附带）、系统自带 PowerShell 5.1：
+
+```powershell
+git clone https://github.com/windfall33/win-dock.git
+cd win-dock
+npm install
+npm start          # 启动 Dock
+npm test           # 运行 138 个测试（可选）
+```
+
+说明：
+
+- 源码运行走 Electron 官方签名程序，不触发 SmartScreen；
+- 桥接脚本启动时已带 `-ExecutionPolicy Bypass`，不受系统 PowerShell 执行策略限制；
+- 源码运行时的配置保存在 `%APPDATA%\win-dock`，与安装版（`%APPDATA%\Win Dock`）
+  相互独立；
+- 国内网络 `npm install` 下载 Electron 较慢时，可先执行
+  `npm config set registry https://registry.npmmirror.com` 并配置
+  `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`。
+
 ## 快速开始
 
 ```powershell
