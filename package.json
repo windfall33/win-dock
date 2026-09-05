@@ -1,0 +1,56 @@
+{
+  "name": "mac-dock",
+  "productName": "Mac Dock",
+  "version": "1.0.0",
+  "description": "A pixel-faithful macOS-style Dock for Windows",
+  "main": "src/main.js",
+  "author": "you",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "dist": "electron-builder --win",
+    "dist:dir": "electron-builder --win --dir"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.macdock.desktop",
+    "productName": "Mac Dock",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!docs/**",
+      "!test/**",
+      "!*.png",
+      "!*.md",
+      "!logs-run.txt",
+      "!build/**"
+    ],
+    "asarUnpack": [
+      "src/native/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

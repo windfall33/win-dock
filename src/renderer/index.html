@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="dock-root" class="hidden">
+    <div id="dock-bar">
+      <div id="dock-items"></div>
+    </div>
+  </div>
+
+  <div id="tooltip" class="tooltip hidden"></div>
+  <div id="preview-panel" class="preview hidden"></div>
+  <div id="stack-panel" class="stack-panel hidden"></div>
+  <div id="menu-layer" class="hidden"></div>
+  <div id="drag-ghost" class="drag-ghost hidden"></div>
+
+  <script src="../core/confirm-arm.js"></script>
+  <script src="icon-plate.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

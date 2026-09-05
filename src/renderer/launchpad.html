@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+<link rel="stylesheet" href="launchpad.css">
+</head>
+<body>
+  <div id="lp-backdrop"></div>
+  <div id="lp-shell">
+    <input id="lp-search" type="text" placeholder="搜索" spellcheck="false">
+    <div id="lp-grid"></div>
+    <div id="lp-empty" class="hidden">没有匹配的应用</div>
+    <div id="lp-pages" class="lp-pages hidden"></div>
+  </div>
+<script src="launchpad.js"></script>
+</body>
+</html>

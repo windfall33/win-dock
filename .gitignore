@@ -1,0 +1,10 @@
+node_modules/
+logs/
+logs-run.txt
+shot*.png
+dock-crop.png
+dist/
+release-build/
+release-build*/
+release/
+build/icon.png

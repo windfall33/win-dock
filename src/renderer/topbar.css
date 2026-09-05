@@ -1,0 +1,26 @@
+  * { user-select: none; box-sizing: border-box; cursor: default; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: transparent; overflow: hidden;
+    font-family: "SF Pro Text", "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  }
+  #tb {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px;
+    color: #fff;
+    font-size: 12.5px;
+    text-shadow: 0 0.5px 2.5px rgba(0, 0, 0, .55), 0 0 6px rgba(0, 0, 0, .25);
+  }
+  html.light #tb { color: #1d1d1f; text-shadow: 0 0.5px 2.5px rgba(255,255,255,.6); }
+  .seg {
+    padding: 2px 9px;
+    border-radius: 7px;
+    background: rgba(30, 30, 32, .34);
+    backdrop-filter: blur(14px) saturate(1.5);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
+    box-shadow: inset 0 0.5px 0.5px rgba(255,255,255,.18);
+  }
+  html.light .seg { background: rgba(255,255,255,.5); box-shadow: inset 0 0.5px 0.5px rgba(255,255,255,.8); }
+  #tb-app { max-width: 42vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #tb-clock { font-variant-numeric: tabular-nums; }

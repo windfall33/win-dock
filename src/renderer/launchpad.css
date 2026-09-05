@@ -1,0 +1,134 @@
+  :root {
+    --text: #f2f2f7;
+    --glass: rgba(28, 28, 30, 0.55);
+  }
+  html.light {
+    --text: #1d1d1f;
+    --glass: rgba(245, 245, 247, 0.65);
+  }
+  * { user-select: none; box-sizing: border-box; cursor: default; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: transparent; overflow: hidden;
+    font-family: "SF Pro Text", "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  }
+  #lp-backdrop {
+    position: fixed; inset: 0;
+    background: var(--glass);
+    backdrop-filter: blur(46px) saturate(1.6);
+    -webkit-backdrop-filter: blur(46px) saturate(1.6);
+  }
+  #lp-shell {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 56px 8vw 32px;
+    color: var(--text);
+  }
+  #lp-search {
+    width: 340px;
+    padding: 7px 16px;
+    font-size: 14px;
+    color: var(--text);
+    background: rgba(127,127,129,.26);
+    border: 0.5px solid rgba(127,127,129,.4);
+    border-radius: 9px;
+    outline: none;
+    text-align: center;
+  }
+  #lp-search::placeholder { color: rgba(127,127,129,.9); }
+  #lp-grid {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 108px);
+    gap: 26px 18px;
+    justify-content: center;
+    align-content: start;
+    width: 100%;
+    overflow-y: auto;
+    flex: 1;
+    padding-bottom: 24px;
+  }
+  #lp-grid::-webkit-scrollbar { width: 0; }
+  .lp-cell {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 4px;
+    border-radius: 12px;
+  }
+  .lp-cell:hover { background: rgba(127,127,129,.22); }
+  .lp-cell img {
+    width: 68px; height: 68px;
+    border-radius: 22%;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,.28));
+    pointer-events: none;
+  }
+  .lp-name {
+    margin-top: 7px;
+    max-width: 104px;
+    font-size: 12px; line-height: 16px;
+    text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #lp-empty { margin-top: 80px; font-size: 15px; opacity: .6; }
+  #lp-empty.hidden { display: none; }
+  #lp-pages {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 16px; color: var(--text);
+  }
+  #lp-pages.hidden { display: none; }
+  #lp-pages span {
+    padding: 4px 11px; border-radius: 8px;
+    font-size: 14px; cursor: default;
+  }
+  #lp-pages span:hover { background: rgba(127,127,129,.22); }
+  #lp-pages .lp-pages-label { opacity: .7; }
+  #lp-pages .lp-pages-label:hover { background: transparent; }
+
+  /* ---- 开合动画（macOS Launchpad 观感：背景模糊扩散 + 图标缩放浮现）----
+     打开用 keyframes（窗口 ready-to-show 后自动播放，fill backwards 配合 stagger 延迟）；
+     关闭用 body.lp-closing 切换（渲染层 requestClose 加类，主进程延迟 ~170ms 销毁）。
+     关闭态必须先 animation: none 解除打开动画的 fill 填充，否则 to 态会盖住过渡目标值。 */
+  @keyframes lp-open-bg {
+    from { opacity: 0;
+           backdrop-filter: blur(0px) saturate(1);
+           -webkit-backdrop-filter: blur(0px) saturate(1); }
+    to   { opacity: 1;
+           backdrop-filter: blur(46px) saturate(1.6);
+           -webkit-backdrop-filter: blur(46px) saturate(1.6); }
+  }
+  #lp-backdrop { animation: lp-open-bg .24s ease-out both; }
+
+  @keyframes lp-open-cell {
+    from { opacity: 0; transform: scale(.86); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .lp-cell {
+    animation: lp-open-cell .3s cubic-bezier(.2,.7,.3,1) backwards;
+    animation-delay: calc(var(--i, 0) * 14ms);
+  }
+
+  @keyframes lp-fade-down {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: none; }
+  }
+  #lp-search { animation: lp-fade-down .24s .06s ease-out backwards; }
+
+  body.lp-closing #lp-backdrop {
+    animation: none;
+    opacity: 0;
+    backdrop-filter: blur(0px) saturate(1);
+    -webkit-backdrop-filter: blur(0px) saturate(1);
+    transition: opacity .16s ease-in,
+                backdrop-filter .16s ease-in,
+                -webkit-backdrop-filter .16s ease-in;
+  }
+  body.lp-closing .lp-cell {
+    animation: none;
+    opacity: 0;
+    transform: scale(.94);
+    transition: opacity .13s ease-in, transform .13s ease-in;
+  }
+  body.lp-closing #lp-search {
+    animation: none;
+    opacity: 0;
+    transition: opacity .12s ease-in;
+  }

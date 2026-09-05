@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+<style>
+  :root {
+    --bg: #f5f5f7; --card: #ffffff; --text: #1d1d1f; --sub: #6e6e73;
+    --accent: #0a84ff; --line: rgba(0,0,0,.08);
+  }
+  html.dark {
+    --bg: #161618; --card: #232326; --text: #f2f2f7; --sub: #98989f;
+    --line: rgba(255,255,255,.09);
+  }
+  * { user-select: none; box-sizing: border-box; }
+  body {
+    margin: 0; padding: 18px 20px;
+    background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    font-size: 13px;
+  }
+  h2 { font-size: 16px; margin: 4px 0 14px; font-weight: 600; }
+  .group {
+    background: var(--card); border-radius: 12px;
+    margin-bottom: 14px; overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .row {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 11px 14px;
+  }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row .label { color: var(--text); }
+  .row .hint { font-size: 11px; color: var(--sub); margin-top: 2px;}
+  input[type=range] { width: 150px; accent-color: var(--accent); }
+  .val { width: 34px; text-align: right; color: var(--sub); font-variant-numeric: tabular-nums;}
+  .toggle {
+    position: relative; width: 42px; height: 24px;
+    background: rgba(120,120,128,.32); border-radius: 12px;
+    cursor: pointer; transition: background .2s;
+    flex: none;
+  }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+    transition: left .2s cubic-bezier(.3,.8,.4,1);
+  }
+  .toggle.on { background: #30d158; }
+  .toggle.on::after { left: 20px; }
+  select, button {
+    font-family: inherit; font-size: 13px;
+    padding: 5px 10px; border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--card); color: var(--text);
+  }
+  button { cursor: pointer; }
+  .foot { color: var(--sub); font-size: 11.5px; line-height: 1.65; padding: 2px 4px; }
+</style>
+</head>
+<body>
+  <h2>Dock 设置</h2>
+
+  <div class="group">
+    <div class="row">
+      <div><div class="label">图标大小</div></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input id="size" type="range" min="36" max="72" step="2">
+        <span class="val" id="sizeVal"></span>
+      </div>
+    </div>
+    <div class="row">
+      <div><div class="label">放大倍率</div></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input id="mag" type="range" min="1" max="2.2" step="0.05">
+        <span class="val" id="magVal"></span>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">自动隐藏</div>
+        <div class="hint">鼠标移开时 Dock 滑出屏幕</div>
+      </div>
+      <div class="toggle" id="autohide"></div>
+    </div>
+    <div class="row">
+      <div><div class="label">外观</div></div>
+      <select id="appearance">
+        <option value="system">跟随系统</option>
+        <option value="light">浅色</option>
+        <option value="dark">深色</option>
+      </select>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">Dock 位置</div>
+        <div class="hint">底部 / 左侧 / 右侧，与 macOS 一致</div>
+      </div>
+      <select id="position">
+        <option value="bottom">底部</option>
+        <option value="left">左侧</option>
+        <option value="right">右侧</option>
+      </select>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">最小化效果</div>
+        <div class="hint">genie 吸入 / scale 缩放，与 macOS 一致</div>
+      </div>
+      <select id="minimizeEffect">
+        <option value="genie">genie 吸入</option>
+        <option value="scale">scale 缩放</option>
+      </select>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">最小化到应用图标</div>
+        <div class="hint">最小化窗口收进对应应用图标，不放右侧分区（macOS 设置项）</div>
+      </div>
+      <div class="toggle" id="minimizeIntoIcon"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">开机自动启动</div>
+        <div class="hint">登录 Windows 后自动运行 Dock</div>
+      </div>
+      <div class="toggle" id="autologin"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">顶部菜单栏</div>
+        <div class="hint">屏幕顶部的应用名与时钟；关闭可省约 50MB 内存</div>
+      </div>
+      <div class="toggle" id="topbar"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">隐藏 Windows 任务栏</div>
+        <div class="hint">一键自动隐藏任务栏，仅保留 Dock；关闭可还原</div>
+      </div>
+      <div class="toggle" id="hideTaskbar"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">全屏应用时让位</div>
+        <div class="hint">Dock 恒浮于普通窗口之上（含最大化/铺满不会让 Dock 隐藏）；仅当全屏应用时才自动收起，鼠标贴边可唤回。关闭则全屏时也保持显示</div>
+      </div>
+      <div class="toggle" id="occludeAway"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">多显示器跟随</div>
+        <div class="hint">在多个屏幕间移动鼠标时，Dock 跟着出现在当前屏幕</div>
+      </div>
+      <div class="toggle" id="multidisplay"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">工作区预留</div>
+        <div class="hint">最大化窗口自动避开 Dock（macOS 行为）。仅对主显示器生效；Dock 隐藏任务栏时无需开启</div>
+      </div>
+      <div class="toggle" id="workareaReserve"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    提示：右键点击 Dock 图标可固定/移除应用、关闭程序；<br>
+    中键点击运行中的应用图标可打开 Exposé 窗口缩略图（Esc 或点击空白关闭）；<br>
+    把 .exe 或快捷方式拖到 Dock 上即可固定应用；<br>
+    把文件拖到应用图标上用该应用打开，拖到底部废纸篓即删除到回收站。<br>
+    快捷键：Ctrl+Shift+D 切换自动隐藏，Ctrl+Shift+M 切换放大，Ctrl+Shift+P 切换位置。<br>
+    为获得最纯粹的体验，建议将 Windows 任务栏设置为「自动隐藏任务栏」。
+  </div>
+
+<script src="settings.js"></script>
+</body>
+</html>

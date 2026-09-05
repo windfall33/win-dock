@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+<style>
+  :root {
+    --text: #f2f2f7;
+    --glass: rgba(20, 20, 22, 0.55);
+    --card: rgba(255,255,255,0.08);
+    --card-line: rgba(255,255,255,0.14);
+    --thumb-bg: rgba(255,255,255,0.92);
+  }
+  html.light {
+    --text: #1d1d1f;
+    --glass: rgba(240, 240, 244, 0.62);
+    --card: rgba(255,255,255,0.55);
+    --card-line: rgba(0,0,0,0.10);
+    --thumb-bg: rgba(255,255,255,0.96);
+  }
+  * { user-select: none; box-sizing: border-box; cursor: default; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: transparent; overflow: hidden;
+    font-family: "SF Pro Text", "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  }
+  #ex-backdrop {
+    position: fixed; inset: 0;
+    background: var(--glass);
+    backdrop-filter: blur(46px) saturate(1.6);
+    -webkit-backdrop-filter: blur(46px) saturate(1.6);
+  }
+  #ex-shell {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 44px 7vw 36px;
+    color: var(--text);
+  }
+  #ex-head {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 30px;
+  }
+  #ex-head img { width: 30px; height: 30px; border-radius: 22%; }
+  #ex-head .name { font-size: 19px; font-weight: 600; letter-spacing: .2px; }
+  #ex-head .hint { font-size: 12px; opacity: .55; margin-left: 10px; }
+  #ex-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 22px;
+    justify-content: center;
+    align-content: start;
+    width: 100%; max-width: 1240px;
+    overflow-y: auto;
+    flex: 1;
+    padding: 6px 4px 20px;
+  }
+  #ex-grid::-webkit-scrollbar { width: 0; }
+  .ex-card {
+    border-radius: 12px;
+    background: var(--card);
+    border: 0.5px solid var(--card-line);
+    box-shadow: 0 10px 30px rgba(0,0,0,.28);
+    overflow: hidden;
+    transform: scale(1);
+    transition: transform .18s cubic-bezier(.3,.8,.4,1), box-shadow .18s;
+    outline: none;
+  }
+  .ex-card:hover, .ex-card:focus-visible {
+    transform: scale(1.035);
+    box-shadow: 0 14px 40px rgba(0,0,0,.4);
+    border-color: rgba(10,132,255,.65);
+  }
+  .ex-thumb {
+    width: 100%; aspect-ratio: 16 / 10;
+    background: var(--thumb-bg);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .ex-thumb img {
+    width: 100%; height: 100%; object-fit: contain;
+    pointer-events: none;
+  }
+  .ex-thumb .ex-fallback { font-size: 12px; opacity: .5; color: #333; }
+  .ex-title {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px;
+    font-size: 12.5px;
+    white-space: nowrap; overflow: hidden;
+  }
+  .ex-title .t { overflow: hidden; text-overflow: ellipsis; }
+  .ex-title .min-tag {
+    flex: none; font-size: 10.5px; opacity: .6;
+    border: 0.5px solid currentColor; border-radius: 4px;
+    padding: 0 5px; line-height: 15px;
+  }
+  #ex-empty {
+    margin-top: 8vh; font-size: 15px; opacity: .6;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <div id="ex-backdrop"></div>
+  <div id="ex-shell">
+    <div id="ex-head">
+      <img id="ex-icon" alt="">
+      <span class="name" id="ex-name"></span>
+      <span class="hint" id="ex-hint"></span>
+    </div>
+    <div id="ex-grid"></div>
+    <div id="ex-empty" class="hidden">没有可显示的窗口</div>
+  </div>
+<script src="expose.js"></script>
+</body>
+</html>
