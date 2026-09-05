@@ -7,7 +7,7 @@ const INVOKE_OK = new Set([
   'close-window', 'close-windows', 'kill-app', 'reveal', 'open-trash', 'empty-trash',
   'recycle-files', 'pin-remove', 'pin-add', 'add-app', 'pick-app', 'reorder', 'set-setting',
   'open-settings', 'recent-remove', 'pick-folder', 'add-folder', 'list-dir', 'icon-data', 'open-path',
-  'move-files',
+  'move-files', 'modifier-action', 'focus-restore',
   'window-thumb', 'launchpad-open', 'launchpad-close', 'launchpad-data', 'launchpad-launch',
   'expose-open', 'expose-close',
   'set-bar-rect',

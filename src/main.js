@@ -735,6 +735,41 @@ async function handleInvoke(channel, p) {
       return { ok: true };
     }
 
+    case 'modifier-action': {
+      // P1-F1 修饰键点击编排（决策在 core/modifier-actions.js / renderer，这里只做 IO）。
+      // 最小化失败的窗口（提权进程等）跳过且不重试，单次汇总记一条日志。
+      const failures = [];
+      if (p.type === 'hide-current') {
+        // 最小化当前应用全部窗口 + 焦点给上一个运行中应用（无候选则焦点自然回桌面）
+        for (const h of p.hs || []) {
+          try { await bridge.request('minimize', { h }, 3000); } catch { failures.push(String(h)); }
+        }
+        const prevHs = p.prevHs || [];
+        if (prevHs.length) {
+          try { await bridge.request('focus', { h: prevHs[prevHs.length - 1] }, 3000); }
+          catch { failures.push('focus-prev'); }
+        }
+      } else if (p.type === 'hide-others') {
+        // 先聚焦目标，再最小化其他所有应用窗口
+        const focusH = (p.hs || [])[0];
+        if (focusH) {
+          try { await bridge.request('focus', { h: focusH }, 3000); }
+          catch { failures.push('focus-target'); }
+        }
+        const mine = new Set((p.hs || []).map(String));
+        const wins = await bridge.request('enum-windows', { excludePid: process.pid }, 8000).catch(() => []);
+        for (const w of (Array.isArray(wins) ? wins : [])) {
+          if (!w.m && !mine.has(String(w.h))) {
+            try { await bridge.request('minimize', { h: w.h }, 3000); } catch { failures.push(String(w.h)); }
+          }
+        }
+      } else {
+        return { ok: false, err: 'unknown-modifier-action:' + String(p.type || '') };
+      }
+      if (failures.length) log('modifier-action: skipped', failures.length, 'window(s) (no retry)');
+      return { ok: true, failed: failures.length };
+    }
+
     case 'show-all': {
       // macOS「显示所有窗口」：还原所有最小化窗口
       const wins = await bridge.request('enum-windows', { excludePid: process.pid }, 8000).catch(() => []);

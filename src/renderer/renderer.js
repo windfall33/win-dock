@@ -1251,11 +1251,14 @@ itemsEl.addEventListener('mousedown', (ev) => {
   const id = slot.dataset.kind === 'trash' ? '__trash__' : slot.dataset.id;
   const holder = slotMap.get(id);
   const entryAtDown = holder ? holder.entry : { kind: 'trash' };
+  // F1 修饰键状态取按下时刻（mouseup 时修饰键可能已释放）
+  const modsAtDown = { alt: ev.altKey, ctrl: ev.ctrlKey };
   let dragging = false;
 
   const onMove = (mev) => {
     if (mev.buttons !== 1) { finish(true); return; }
     if (!dragging) {
+      // 拖拽阈值判定保持在修饰键判定之前：修饰键点击不影响拖拽排序
       if (Math.abs(mev.clientX - startX) + Math.abs(mev.clientY - startY) < 6) return;
       if (id === '__trash__' || (slot.dataset.kind !== 'app' && slot.dataset.kind !== 'folder')) { finish(false); return; }
       dragging = true;
@@ -1268,7 +1271,7 @@ itemsEl.addEventListener('mousedown', (ev) => {
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
     if (dragging) endInternalDrag(ev, cancelled);
-    else if (!cancelled) handleClick(id, entryAtDown);
+    else if (!cancelled) handleClick(id, entryAtDown, modsAtDown);
   };
   const onUp = () => finish(false);
 
@@ -1276,7 +1279,7 @@ itemsEl.addEventListener('mousedown', (ev) => {
   document.addEventListener('mouseup', onUp);
 });
 
-function handleClick(id, entryAtPress) {
+function handleClick(id, entryAtPress, mods) {
   if (id === '__trash__') {
     window.dock.invoke('open-trash');
     return;
@@ -1307,6 +1310,45 @@ function handleClick(id, entryAtPress) {
     return;
   }
   if (fresh.kind !== 'app') return;
+  // F1 修饰键点击：仅应用槽位响应；reveal/hide 路径不走弹跳与 tooltip 消费
+  if (mods && (mods.alt || mods.ctrl)) {
+    const wins = fresh.windows || [];
+    const action = ModifierActions.resolveModifierAction({
+      alt: !!mods.alt, ctrl: !!mods.ctrl,
+      targetRunning: wins.length > 0,
+      targetFocused: wins.some((w) => w.f),
+    });
+    if (action === 'reveal') {
+      // UWP 条目（无真实 exe 路径）静默 no-op
+      if (fresh.exe) window.dock.invoke('reveal', { path: fresh.exe });
+      return;
+    }
+    if (action === 'hide-current') {
+      // 焦点交给「上一个运行中的应用」（recent LRU 中最近一个仍在运行的），无候选自然回桌面
+      const runningExes = (STATE.entries || [])
+        .filter((e) => (e.windows || []).length > 0 && e.id !== fresh.id)
+        .map((e) => e.exe);
+      const prev = ModifierActions.previousRunningApp(STATE.recent || [], runningExes, fresh.exe);
+      const prevEntry = prev
+        ? (STATE.entries || []).find((e) => String(e.exe || '').toLowerCase() === String(prev.exe || '').toLowerCase() &&
+            (e.windows || []).length > 0)
+        : null;
+      window.dock.invoke('modifier-action', {
+        type: 'hide-current',
+        hs: wins.map((w) => w.h),
+        prevHs: prevEntry ? prevEntry.windows.map((w) => w.h) : [],
+      });
+      return;
+    }
+    if (action === 'hide-others') {
+      window.dock.invoke('modifier-action', {
+        type: 'hide-others',
+        hs: wins.map((w) => w.h),
+      });
+      return;
+    }
+    // activate：落到底下走普通激活
+  }
   activateEntry(fresh);
 }
 
