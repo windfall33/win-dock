@@ -86,7 +86,9 @@ function createSnapshotBuilder(deps) {
           args: '',
           running: false,
           pinned: true,
-          stackView: p.stackView || 'grid',
+          // P1-F5：每文件夹排序/显示配置；缺省字段按默认处理（view=auto，sortBy=name）
+          stackView: p.stackView || 'auto',
+          stackSortBy: p.stackSortBy || 'name',
           icon: (p.iconPath || p.exe) ? iconsGetSync(p.iconPath || p.exe) : null,
           windows: [],
         });

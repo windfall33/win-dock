@@ -960,10 +960,15 @@ while ($true) {
                 foreach ($f in [System.IO.Directory]::EnumerateFileSystemEntries($p)) {
                     try {
                         $isDir = [System.IO.Directory]::Exists($f)
+                        # P1-F5：mtime（添加时间排序）/ ctime（创建时间排序），Unix 毫秒
+                        $mt = [DateTimeOffset]$([System.IO.Directory]::GetLastWriteTime($f))
+                        $ct = [DateTimeOffset]$([System.IO.Directory]::GetCreationTime($f))
                         $entries.Add(@{
                             name = [System.IO.Path]::GetFileName($f)
                             isFolder = $isDir
                             iconPath = $f
+                            mtime = [int64]$mt.ToUnixTimeMilliseconds()
+                            ctime = [int64]$ct.ToUnixTimeMilliseconds()
                         })
                     } catch {}
                 }

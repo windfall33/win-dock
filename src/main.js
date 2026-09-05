@@ -892,12 +892,22 @@ async function handleInvoke(channel, p) {
       return await bridge.request('list-dir', { path: String(p.path || '') }, 15000);
 
     case 'set-stack-view': {
-      // 文件夹 Stack 展示方式：grid / fan / list（mac 原版 Dock 的 Stacks 视图切换）
+      // 文件夹 Stack 展示方式：grid / fan / list / auto（P1-F5：自动按数量阈值）
       const path = String(p.path || '');
-      const view = ['grid', 'fan', 'list'].includes(p.view) ? p.view : 'grid';
+      const view = ['grid', 'fan', 'list', 'auto'].includes(p.view) ? p.view : 'auto';
       const pins = settings.all.pins || [];
       const pin = pins.find((x) => x.kind === 'folder' && x.exe === path);
       if (pin) { pin.stackView = view; settings.set('pins', pins); }
+      return { ok: true };
+    }
+
+    case 'set-stack-sort': {
+      // P1-F5 文件夹排序方式：名称 / 添加日期 / 创建日期 / 种类
+      const path = String(p.path || '');
+      const sortBy = ['name', 'added', 'created', 'kind'].includes(p.sortBy) ? p.sortBy : 'name';
+      const pins = settings.all.pins || [];
+      const pin = pins.find((x) => x.kind === 'folder' && x.exe === path);
+      if (pin) { pin.stackSortBy = sortBy; settings.set('pins', pins); }
       return { ok: true };
     }
 

@@ -269,3 +269,25 @@ test('enum-windows entries carry the hung boolean', async () => {
     }
   });
 });
+
+test('list-dir entries carry mtime/ctime unix milliseconds (P1-F5)', async () => {
+  // 临时目录 + 一个文件，验证时间字段为合理整数毫秒
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dock-ls-'));
+  try {
+    fs.writeFileSync(path.join(tmp, 'probe.txt'), 'x');
+    await withBridge(async (s) => {
+      send(s, 'ld1', 'list-dir', { path: tmp });
+      const res = await waitFor(s, 'ld1');
+      assert.equal(res.ok, true);
+      const ent = res.data.entries.find((e) => e.name === 'probe.txt');
+      assert.ok(ent, '临时文件应被枚举');
+      assert.equal(typeof ent.mtime, 'number');
+      assert.equal(typeof ent.ctime, 'number');
+      const now = Date.now();
+      assert.ok(ent.mtime > now - 60_000 && ent.mtime <= now, 'mtime 应为刚写入时刻附近');
+      assert.ok(ent.ctime > now - 60_000 && ent.ctime <= now, 'ctime 应为刚创建时刻附近');
+    });
+  } finally {
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {}
+  }
+});

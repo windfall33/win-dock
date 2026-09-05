@@ -1044,7 +1044,15 @@ function switchStackView(f, view) {
   f.stackView = view;
   const path = f.folderPath || f.exe || '';
   window.dock.invoke('set-stack-view', { path, view });
-  if (stackCurrent && stackCurrent.path === path) renderStack(path, view);
+  if (stackCurrent && stackCurrent.path === path) renderStack(path, view, stackCurrent.sortBy);
+}
+
+// P1-F5：切换排序方式，写回 settings 并即时刷新已打开的 Stack 面板
+function switchStackSort(f, sortBy) {
+  f.stackSortBy = sortBy;
+  const path = f.folderPath || f.exe || '';
+  window.dock.invoke('set-stack-sort', { path, sortBy });
+  if (stackCurrent && stackCurrent.path === path) renderStack(path, stackCurrent.viewConf, sortBy);
 }
 
 async function openStack(folderPath, anchorEl, view) {
@@ -1077,13 +1085,20 @@ async function openStack(folderPath, anchorEl, view) {
   }
 }
 
-async function renderStack(folderPath, view) {
+async function renderStack(folderPath, viewArg, sortByArg) {
   const res = await window.dock.invoke('list-dir', { path: folderPath });
-  const entries = (res && res.entries) || [];
+  const rawEntries = (res && res.entries) || [];
   const name = folderPath.split(/[\\/]/).pop() || folderPath;
-  const cur = stackCurrent && stackCurrent.path === folderPath ? stackCurrent.view
-    : (view || (stackCurrent && stackCurrent.view) || 'grid');
-  stackCurrent = { path: folderPath, title: name, view: cur };
+  // P1-F5 视图/排序解析：显式参数 > 已打开面板状态 > 默认（auto / name）。
+  // auto 在 stackViewMode 里按条目数量落到 fan/grid。
+  const isSame = stackCurrent && stackCurrent.path === folderPath;
+  const viewConf = viewArg !== undefined ? viewArg
+    : (isSame ? stackCurrent.viewConf : 'auto');
+  const sortBy = sortByArg !== undefined ? sortByArg
+    : (isSame ? stackCurrent.sortBy : 'name');
+  const view = StackSort.stackViewMode(rawEntries.length, viewConf);
+  const entries = StackSort.sortStackItems(rawEntries, sortBy);
+  stackCurrent = { path: folderPath, title: name, viewConf, sortBy, view };
 
   stackPanelEl.innerHTML = '';
   const header = document.createElement('div');
@@ -1111,7 +1126,7 @@ async function renderStack(folderPath, view) {
   header.appendChild(close);
 
   const grid = document.createElement('div');
-  grid.className = 'stack-grid ' + cur;
+  grid.className = 'stack-grid ' + view;
   for (const ent of entries) {
     const cell = document.createElement('div');
     cell.className = 'st-cell';
@@ -1136,7 +1151,7 @@ async function renderStack(folderPath, view) {
 
   stackPanelEl.appendChild(header);
   stackPanelEl.appendChild(grid);
-  if (cur === 'fan') layoutFan(grid);
+  if (view === 'fan') layoutFan(grid);
 }
 
 // Stack 的 fan 真扇形：图标沿弧线辐射、互相重叠、越靠近中心越大（mac 意象）
@@ -1869,29 +1884,38 @@ document.addEventListener('contextmenu', (ev) => {
     const holder = slotMap.get(slotEl.dataset.id);
     if (!holder || !holder.entry) return;
     const f = holder.entry;
+    const vp = f.folderPath || f.exe || '';
+    const viewNow = f.stackView || 'auto';
+    const sortNow = f.stackSortBy || 'name';
     showMenu(ev.clientX, ev.clientY, [
       {
         label: '打开',
         iconUrl: f.icon || folderSvg(),
-        action: () => openStack(f.folderPath || f.exe || '', holder.el, f.stackView),
+        action: () => openStack(vp, holder.el, f.stackView),
       },
       { sep: true },
       {
-        label: '显示为：网格' + (f.stackView === 'grid' ? '  ✓' : ''),
-        action: () => switchStackView(f, 'grid'),
+        label: '显示为',
+        children: [
+          { label: '自动' + (viewNow === 'auto' ? '  ✓' : ''), action: () => switchStackView(f, 'auto') },
+          { label: '网格' + (viewNow === 'grid' ? '  ✓' : ''), action: () => switchStackView(f, 'grid') },
+          { label: '扇形' + (viewNow === 'fan' ? '  ✓' : ''), action: () => switchStackView(f, 'fan') },
+          { label: '列表' + (viewNow === 'list' ? '  ✓' : ''), action: () => switchStackView(f, 'list') },
+        ],
       },
       {
-        label: '显示为：扇形' + (f.stackView === 'fan' ? '  ✓' : ''),
-        action: () => switchStackView(f, 'fan'),
-      },
-      {
-        label: '显示为：列表' + (f.stackView === 'list' ? '  ✓' : ''),
-        action: () => switchStackView(f, 'list'),
+        label: '排序方式',
+        children: [
+          { label: '名称' + (sortNow === 'name' ? '  ✓' : ''), action: () => switchStackSort(f, 'name') },
+          { label: '添加日期' + (sortNow === 'added' ? '  ✓' : ''), action: () => switchStackSort(f, 'added') },
+          { label: '创建日期' + (sortNow === 'created' ? '  ✓' : ''), action: () => switchStackSort(f, 'created') },
+          { label: '种类' + (sortNow === 'kind' ? '  ✓' : ''), action: () => switchStackSort(f, 'kind') },
+        ],
       },
       { sep: true },
       {
         label: '在文件资源管理器中显示',
-        action: () => window.dock.invoke('reveal', { path: f.folderPath || f.exe || '' }),
+        action: () => window.dock.invoke('reveal', { path: vp }),
       },
       { label: '从 Dock 中移除', action: () => window.dock.invoke('pin-remove', { id: f.id }) },
     ]);
