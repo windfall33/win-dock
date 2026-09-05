@@ -195,6 +195,8 @@ html[data-pos="bottom"] .slot canvas.app-icon {
 
 /* 分隔线（apps | recents/minimized | trash 区）*/
 .divider-slot { display:flex; align-items:center; }
+/* P1-F3：主分隔线可拖拽调宽，hover 光标按 Dock 方向提示 */
+.divider-slot.divider-resizable { cursor: ns-resize; }
 .divider {
   width: 1px;
   align-self: stretch;
@@ -522,6 +524,11 @@ html[data-pos="left"] .divider-slot,
 html[data-pos="right"] .divider-slot {
   align-self: stretch;
   justify-content: center;
+}
+/* P1-F3：侧栏时主分隔线拖宽为水平方向 */
+html[data-pos="left"] .divider-slot.divider-resizable,
+html[data-pos="right"] .divider-slot.divider-resizable {
+  cursor: ew-resize;
 }
 html[data-pos="left"] .divider,
 html[data-pos="right"] .divider {

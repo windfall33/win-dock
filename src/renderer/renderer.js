@@ -51,6 +51,12 @@ function syncCssVars() {
   rootEl.style.setProperty('--is', OPT.iconSize + 'px');
   // 底部条高恒定（放大时图标浮出条外）；侧栏（左/右）条竖向撑满窗口，图标竖直排布
   barEl.style.height = isVert() ? '100%' : (OPT.iconSize + 18) + 'px';
+  // P1-F3：iconSize 变化同步刷新槽位基准尺寸——holder 的 baseSize 是 append 时快照，
+  // 不随 rebuild 更新，拖宽/滑块调整后 layoutTick 会拿旧基准算放大，必须在此同步
+  for (const [, s] of slotMap) {
+    const k = s.el.dataset.kind;
+    s.baseSize = (k === 'recent' || k === 'min') ? Math.round(OPT.iconSize * 0.72) : OPT.iconSize;
+  }
 }
 
 window.dock.onSettings((s) => {
@@ -334,7 +340,8 @@ function makeAppSlot(entry) {
 
 function makeDivider(id) {
   const s = document.createElement('div');
-  s.className = 'divider-slot';
+  // 仅主分隔线可拖宽（hover 光标提示 + 拖拽目标）
+  s.className = 'divider-slot' + (id === '__divider__' ? ' divider-resizable' : '');
   s.dataset.kind = 'divider';
   s.dataset.id = id;
   s.innerHTML = '<div class="divider"></div>';
@@ -580,6 +587,13 @@ function pointOverBar(rect, mx, my) {
 
 function computeTargets(mx, my) {
   const out = [];
+  // P1-F3：分隔线拖宽期间冻结鱼眼放大，防止布局抖动
+  if (fisheyeFrozen) {
+    for (const [, s] of slotMap) {
+      if (s.el.isConnected) out.push({ s, t: 1 });
+    }
+    return out;
+  }
   const barRect = barEl.getBoundingClientRect();
   // 每帧用鼠标实时位置判断是否在 Dock 栏上，避免状态变量过期导致缩放卡死
   const overBar = !dockHiddenNow && !fullscreenHideNow && pointOverBar(barRect, mx, my);
@@ -1246,7 +1260,12 @@ itemsEl.addEventListener('mousedown', (ev) => {
   }
   if (ev.button !== 0) return;
   const slot = ev.target.closest('.slot');
-  if (!slot || slot.dataset.kind === 'divider') return;
+  if (!slot) return;
+  // P1-F3 分隔线拖宽：仅主分隔线（固定应用区 | 最近区）可拖，其余分隔线保持静态
+  if (slot.dataset.kind === 'divider') {
+    if (slot.dataset.id === '__divider__') startDividerResize(ev);
+    return;
+  }
   if (menuOpen) closeMenu();
 
   const startX = ev.clientX, startY = ev.clientY;
@@ -1438,6 +1457,46 @@ document.addEventListener('keydown', (ev) => {
 });
 
 // ---------------------------------------------------------------- 内部拖拽
+
+// ---------------------------------------------------------------- 分隔线拖宽（P1-F3）
+
+// 主分隔线拖拽调整图标尺寸：36–72px 与设置滑块同范围，写回走 set-setting（iconSize），
+// 设置面板数值经 broadcastSettings 双向同步。
+// 拖动期间冻结鱼眼（computeTargets 全部回静止态）防止布局抖动；mouseup 解除。
+let fisheyeFrozen = false;
+
+function startDividerResize(ev) {
+  cancelTooltip();
+  // 方向感知：底部 Dock 用垂直位移、侧栏用水平位移；朝屏幕外侧拖 = 增大
+  const origin = isVert() ? ev.clientX : ev.clientY;
+  const startSize = OPT.iconSize;
+  fisheyeFrozen = true;
+  mouseX = -9999; mouseY = -9999;   // 立即回静止态
+  ensureRaf();
+
+  const onMove = (mev) => {
+    if (mev.buttons !== 1) { finishDividerResize(); return; }
+    let raw;
+    if (POS === 'bottom') raw = mev.clientY - origin;               // 向下（屏幕外）= 增大
+    else if (POS === 'left') raw = origin - mev.clientX;            // 向左（屏幕外）= 增大
+    else raw = mev.clientX - origin;                                // 向右（屏幕外）= 增大
+    // 每累计 4px 位移 = 1 级图标尺寸
+    const next = Math.min(72, Math.max(36, startSize + Math.round(raw / 4)));
+    if (next !== OPT.iconSize) {
+      window.dock.invoke('set-setting', { key: 'iconSize', value: next });
+    }
+  };
+  const finishDividerResize = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    fisheyeFrozen = false;
+    mouseX = -9999; mouseY = -9999;   // 松手瞬间不保留陈旧放大目标
+    ensureRaf();
+  };
+  const onUp = () => finishDividerResize();
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
 
 function startInternalDrag(id, slot, ev) {
   cancelTooltip();
