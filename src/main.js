@@ -182,7 +182,7 @@ if (!gotLock) {
     // 清扫父进程已死的孤儿桥接（强杀 Electron 后 stdin EOF 可能未唤醒 ReadLine）
     execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
       "Get-CimInstance Win32_Process -Filter \"Name='powershell.exe'\" | " +
-      "Where-Object { $_.CommandLine -like '*mac-dock*bridge.ps1*' -and " +
+      "Where-Object { $_.CommandLine -match 'mac-dock|win-dock' -and $_.CommandLine -like '*bridge.ps1*' -and " +
       "-not (Get-Process -Id $_.ParentProcessId -ErrorAction SilentlyContinue) } | " +
       "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
     ], () => {});

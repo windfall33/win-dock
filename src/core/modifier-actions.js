@@ -33,10 +33,10 @@ function previousRunningApp(recent, runningExes, currentExe) {
   return null;
 }
 
-const api = { resolveModifierAction, previousRunningApp };
+const modifierActionsApi = { resolveModifierAction, previousRunningApp };
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = api;
+  module.exports = modifierActionsApi;
 } else {
-  window.ModifierActions = api;
+  window.ModifierActions = modifierActionsApi;
 }

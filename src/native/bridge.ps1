@@ -1,4 +1,4 @@
-﻿# mac-dock native bridge
+﻿# win-dock native bridge
 # Persistent helper process. Speaks NDJSON over stdin/stdout.
 # Request : {"id":"n","cmd":"...","args":{...}}
 # Response: {"id":"n","ok":true/false,"data":{...}}

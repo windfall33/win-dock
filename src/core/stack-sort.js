@@ -42,10 +42,10 @@ function stackViewMode(count, configured) {
   return (count | 0) <= 5 ? 'fan' : 'grid';
 }
 
-const api = { sortStackItems, stackViewMode };
+const stackSortApi = { sortStackItems, stackViewMode };
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = api;
+  module.exports = stackSortApi;
 } else {
-  window.StackSort = api;
+  window.StackSort = stackSortApi;
 }

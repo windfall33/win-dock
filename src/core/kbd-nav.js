@@ -47,10 +47,10 @@ function lastIndex(ids) {
   return sel.length ? sel[sel.length - 1] : -1;
 }
 
-const api = { moveFocus, homeIndex, lastIndex, isDividerId };
+const kbdNavApi = { moveFocus, homeIndex, lastIndex, isDividerId };
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = api;
+  module.exports = kbdNavApi;
 } else {
-  window.KbdNav = api;
+  window.KbdNav = kbdNavApi;
 }

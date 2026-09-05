@@ -1,4 +1,4 @@
-﻿# mac-dock bridge — 窗口操作（窗口枚举辅助/前台/截图/hung 由 types.ps1 的 C# 承担）
+﻿# win-dock bridge — 窗口操作（窗口枚举辅助/前台/截图/hung 由 types.ps1 的 C# 承担）
 # 由 bridge.ps1 dot-source 加载；函数体自 switch case / 原函数逐行平移（P3-F1c）。
 
 function Test-Target ($p) { [bool]$p }

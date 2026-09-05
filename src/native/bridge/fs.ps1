@@ -1,4 +1,4 @@
-﻿# mac-dock bridge — 文件系统操作（list-dir / 回收站 / 移动 / 清空 / 计数）
+﻿# win-dock bridge — 文件系统操作（list-dir / 回收站 / 移动 / 清空 / 计数）
 # 由 bridge.ps1 dot-source 加载；函数体自 switch case / 原函数逐行平移（P3-F1c）。
 
 function TrashCount {

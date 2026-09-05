@@ -1,10 +1,10 @@
 {
-  "name": "mac-dock",
-  "productName": "Mac Dock",
+  "name": "win-dock",
+  "productName": "Win Dock",
   "version": "1.0.0",
   "description": "A pixel-faithful macOS-style Dock for Windows",
   "main": "src/main.js",
-  "author": "you",
+  "author": "windfall33",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
@@ -17,8 +17,8 @@
     "electron-builder": "^26.15.3"
   },
   "build": {
-    "appId": "com.macdock.desktop",
-    "productName": "Mac Dock",
+    "appId": "com.windock.desktop",
+    "productName": "Win Dock",
     "directories": {
       "output": "dist",
       "buildResources": "build"

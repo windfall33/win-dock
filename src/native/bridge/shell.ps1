@@ -1,4 +1,4 @@
-﻿# mac-dock bridge — shell 集成（图标提取 / 快捷方式解析 / 开始菜单扫描 / 打开与显示）
+﻿# win-dock bridge — shell 集成（图标提取 / 快捷方式解析 / 开始菜单扫描 / 打开与显示）
 # 由 bridge.ps1 dot-source 加载；图标提取链与 UWP 稳定键在 types.ps1 的 C# 内。
 
 function Invoke-Icon($cid, $argsObj) {

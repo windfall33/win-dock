@@ -47,10 +47,10 @@ function nextState(state, action, now) {
   return { state: IDLE, execute: false };
 }
 
-const api = { nextState, isConfirmValid, CONFIRM_WINDOW_MS, IDLE };
+const confirmArmApi = { nextState, isConfirmValid, CONFIRM_WINDOW_MS, IDLE };
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = api;
+  module.exports = confirmArmApi;
 } else {
-  window.ConfirmArm = api;
+  window.ConfirmArm = confirmArmApi;
 }

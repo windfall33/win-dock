@@ -1,4 +1,4 @@
-# Mac Dock for Windows
+# Win Dock for Windows
 
 对标 macOS 原版 Dock 的 Windows 桌面替代品（Electron 33 + PowerShell 原生桥接）。
 玻璃质感底栏、鱼眼放大、运行指示点、最近应用区、最小化窗口方块、废纸篓、
@@ -48,8 +48,8 @@ npm run dist       # 打包（NSIS 安装器 + win-unpacked）
 
 ### 打包说明
 
-- 产物在 `release/`：`Mac Dock Setup.exe`（安装器）与 `win-unpacked/`（免安装目录）。
-- 打包后 `app.isPackaged = true`，开机自启注册到 `Mac Dock.exe` 本体；
+- 产物在 `dist/`：`Win Dock Setup 1.0.0.exe`（安装器）与 `win-unpacked/`（免安装目录）。
+- 打包后 `app.isPackaged = true`，开机自启注册到 `Win Dock.exe` 本体；
   从开发版切换到打包版后，请在设置里把「开机自动启动」关一次再开一次，
   让注册表指向新路径。
 - 桥接脚本 `bridge.ps1` 通过 `asarUnpack` 落在实体目录（asar 内文件 PowerShell

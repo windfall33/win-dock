@@ -12,7 +12,7 @@ const SKIP_RECENT_HOSTS = new Set([
   'runtimebroker.exe', 'textinputhost.exe', 'applicationframehost.exe',
   'startmenuexperiencehost.exe', 'dwm.exe',
   // P1-F2：键盘导航期间 Dock 窗口自身成为前台，不污染最近使用 LRU
-  'electron.exe', 'mac dock.exe',
+  'electron.exe', 'win dock.exe',
 ]);
 
 // 桌面壳窗口类名：前台是这些类时 Dock 永远显示，忽略 autohide 与遮挡让位。

@@ -117,7 +117,7 @@ test('taskbar-state returns a parseable read-only snapshot', async () => {
 });
 
 test('resolve-shortcut resolves a .lnk target', async () => {
-  const lnk = path.join(os.tmpdir(), 'mac-dock-test-' + process.pid + '.lnk');
+  const lnk = path.join(os.tmpdir(), 'win-dock-test-' + process.pid + '.lnk');
   try {
     await new Promise((resolve) => {
       const ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command',
@@ -129,7 +129,7 @@ test('resolve-shortcut resolves a .lnk target', async () => {
       const res = await waitFor(s, '6');
       assert.equal(res.ok, true);
       assert.equal(res.data.target.toLowerCase(), 'c:\\windows\\system32\\notepad.exe');
-      assert.equal(res.data.name, 'mac-dock-test-' + process.pid);
+      assert.equal(res.data.name, 'win-dock-test-' + process.pid);
       assert.equal(typeof res.data.iconLocation, 'string');
       assert.equal(typeof res.data.arguments, 'string');
     });
@@ -231,7 +231,7 @@ test('list-start-menu returns parseable shortcut entries', async () => {
 });
 
 test('list-dir lists folder entries with icon paths', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mac-dock-dir-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'win-dock-dir-'));
   try {
     fs.writeFileSync(path.join(dir, 'hello.txt'), 'hello');
     fs.mkdirSync(path.join(dir, 'sub'));

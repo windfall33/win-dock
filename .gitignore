@@ -8,3 +8,8 @@ release-build/
 release-build*/
 release/
 build/icon.png
+release-pack/
+.workbuddy/
+.docky-research/
+tools/_seg_*.txt
+tools/_renderer_rewritten.txt

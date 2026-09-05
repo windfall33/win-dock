@@ -19,10 +19,10 @@ function stepSpring(pos, vel, target, stiff, damp) {
   return { pos: p, vel: v, settled: false };
 }
 
-const api = { stepSpring, SETTLE_EPS };
+const springApi = { stepSpring, SETTLE_EPS };
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = api;
+  module.exports = springApi;
 } else {
-  window.Spring = api;
+  window.Spring = springApi;
 }

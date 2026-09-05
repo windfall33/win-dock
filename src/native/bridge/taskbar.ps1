@@ -1,4 +1,4 @@
-﻿# mac-dock bridge — 任务栏集成（注册表状态 / 自动隐藏切换 / 工作区预留）
+﻿# win-dock bridge — 任务栏集成（注册表状态 / 自动隐藏切换 / 工作区预留）
 # 由 bridge.ps1 dot-source 加载；函数体自 switch case / 原函数逐行平移（P3-F1c）。
 
 function Get-TaskbarSettingsBlob {
