@@ -44,6 +44,8 @@ public class NativeOps {
     [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int cmd);
     [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr w, IntPtr l);
     [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr hWnd);
+    // P1-F6 无响应检测：纯内部状态查询（不发消息），对阻塞式桥接主循环安全
+    [DllImport("user32.dll")] public static extern bool IsHungAppWindow(IntPtr hWnd);
 
     public struct RECT { public int L; public int T; public int R; public int B; }
     [DllImport("user32.dll")]
@@ -454,6 +456,9 @@ public class NativeOps {
                 list.Append(IsIconic(h) ? "true" : "false");
                 list.Append(",\"f\":");
                 list.Append((GetForegroundWindow() == h) ? "true" : "false");
+                // P1-F6 无响应标记：仅可见应用主窗口走到这里（工具窗口/不可见已被上方过滤）
+                list.Append(",\"hung\":");
+                list.Append(IsHungAppWindow(h) ? "true" : "false");
 
                 RECT rc;
                 GetWindowRect(h, out rc);

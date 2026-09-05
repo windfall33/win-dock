@@ -1793,7 +1793,15 @@ function showAppMenu(x, y, entry) {
       action: () => window.dock.invoke('show-all'),
     });
     defs.push({ sep: true });
-    defs.push({ label: '退出', action: () => window.dock.invoke('quit-app', { hs: wins.map(w => w.h) }) });
+    // P1-F6：无响应（hung）应用 → 红色「强制退出」（跳过优雅等待，直接 Stop-Process）；
+    // 只提供手动入口，绝不自动强杀（慢启动应用防误伤）
+    defs.push(entry.hung === true
+      ? {
+          label: '强制退出',
+          danger: true,
+          action: () => window.dock.invoke('quit-app', { hs: wins.map(w => w.h), force: true }),
+        }
+      : { label: '退出', action: () => window.dock.invoke('quit-app', { hs: wins.map(w => w.h) }) });
   }
 
   showMenu(x, y, defs);

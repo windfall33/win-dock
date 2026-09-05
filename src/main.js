@@ -692,6 +692,17 @@ async function handleInvoke(channel, p) {
           if (r && r.pid) pids.add(Number(r.pid));
         } catch {}
       }
+      // P1-F6：hung（无响应）应用走「强制退出」——跳过优雅等待，直接 Stop-Process -Force
+      // （复用强杀路径；explorer 是 Windows 外壳，强杀会连任务栏一起拔掉，同样排除）
+      if (p.force) {
+        if (pids.size) {
+          const idList = [...pids].join(',');
+          await new Promise((res) => execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+            'Get-Process -Id ' + idList + ' -ErrorAction SilentlyContinue | ' +
+            "Where-Object { $_.ProcessName -ne 'explorer' } | Stop-Process -Force"], () => res()));
+        }
+        return { ok: true };
+      }
       for (const pid of pids) {
         try { await new Promise((res) => execFile('taskkill', ['/PID', String(pid)], () => res())); } catch {}
       }

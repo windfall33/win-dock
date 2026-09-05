@@ -254,3 +254,18 @@ test('list-dir lists folder entries with icon paths', async () => {
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch {}
   }
 });
+
+// ---- P1-F6 / P1-F5 桥接字段扩展 ----
+
+test('enum-windows entries carry the hung boolean', async () => {
+  await withBridge(async (s) => {
+    send(s, 'h1', 'enum-windows', { excludePid: process.pid });
+    const res = await waitFor(s, 'h1');
+    assert.equal(res.ok, true);
+    assert.ok(Array.isArray(res.data));
+    if (res.data.length > 0) {
+      // 至少宿主环境常有可见窗口；有窗口时字段必须存在且为布尔
+      assert.equal(typeof res.data[0].hung, 'boolean', '每窗口应带 hung 布尔');
+    }
+  });
+});

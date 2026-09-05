@@ -107,7 +107,9 @@ function createSnapshotBuilder(deps) {
         pinned: true,
         // 同步取缓存，杜绝图标闪烁
         icon: (p.iconPath || p.exe) ? iconsGetSync(p.iconPath || p.exe) : null,
-        windows: wins.map((w) => ({ h: w.h, t: w.t, m: !!w.m, f: !!w.f })),
+        windows: wins.map((w) => ({ h: w.h, t: w.t, m: !!w.m, f: !!w.f, hung: !!w.hung })),
+        // P1-F6：任一窗口无响应 → 应用级 hung（仅影响菜单「强制退出」入口）
+        hung: wins.some((w) => w.hung),
         badge: extractBadgeCount(wins.map((w) => w.t)),
       });
     }
@@ -138,11 +140,12 @@ function createSnapshotBuilder(deps) {
           running: true,
           pinned: false,
           icon: null,
+          hung: false,
           windows: [],
         });
         extras.push(groups.get(gkey));
       }
-      groups.get(gkey).windows.push({ h: w.h, t: w.t, m: !!w.m, f: !!w.f });
+      groups.get(gkey).windows.push({ h: w.h, t: w.t, m: !!w.m, f: !!w.f, hung: !!w.hung });
     }
 
     if (track && winList.length > 0) updateExtrasTracking(extras);
@@ -154,6 +157,8 @@ function createSnapshotBuilder(deps) {
     for (const g of shownExtras) {
       g.icon = g.exe ? iconsGetSync(g.exe) : null;
       g.badge = extractBadgeCount((g.windows || []).map((w) => w.t));
+      // P1-F6：未固定应用同样聚合 hung（任一窗口无响应）
+      g.hung = (g.windows || []).some((w) => w.hung);
     }
 
     const entries = [...statePins, ...shownExtras];

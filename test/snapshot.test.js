@@ -173,3 +173,41 @@ test('trash count and env pass through the injected deps', () => {
   assert.equal(snap.env.position, 'bottom');
   assert.equal(snap.settings.position, 'bottom');
 });
+
+// ---- P1-F6 无响应应用检测：hung 聚合 ----
+
+test('hung window aggregates to app-level entry.hung', () => {
+  const b = makeBuilder({
+    settings: { pins: [{ id: 'p1', kind: 'app', name: 'A', exe: 'C://a//a.exe' }] },
+  });
+  const snap = b.build([
+    win('1', 'T1', 'C://a//a.exe'),
+    win('2', 'T2', 'C://a//a.exe', { hung: true }),
+  ], false);
+  const e = snap.entries.find((x) => x.id === 'p1');
+  assert.equal(e.hung, true, '任一窗口 hung 即应用级 hung');
+  assert.equal(e.windows[0].hung, false);
+  assert.equal(e.windows[1].hung, true);
+});
+
+test('no hung windows → entry.hung is false', () => {
+  const b = makeBuilder({
+    settings: { pins: [{ id: 'p1', kind: 'app', name: 'A', exe: 'C://a//a.exe' }] },
+  });
+  const snap = b.build([win('1', 'T1', 'C://a//a.exe')], false);
+  assert.equal(snap.entries.find((x) => x.id === 'p1').hung, false);
+});
+
+test('unpinned running app aggregates hung too', () => {
+  const snap = makeBuilder().build([win('9', 'Foo', 'C://Tools//foo.exe', { hung: true })], false);
+  const e = snap.entries.find((x) => x.id === 'foo.exe');
+  assert.equal(e.hung, true);
+});
+
+test('not-running pinned app reports hung=false', () => {
+  const b = makeBuilder({
+    settings: { pins: [{ id: 'p1', kind: 'app', name: 'A', exe: 'C://a//a.exe' }] },
+  });
+  const snap = b.build([], false);
+  assert.equal(snap.entries.find((x) => x.id === 'p1').hung, false);
+});

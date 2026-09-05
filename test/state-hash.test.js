@@ -63,3 +63,19 @@ test('unrelated entry fields (exe) do not force a push', () => {
   const b = snap({ entries: [{ id: 'a', running: true, icon: 'data:x', exe: 'C:\\other.exe', windows: [{ h: '1', t: 'T1', m: false, f: true }] }] });
   assert.equal(stateSignature(a), stateSignature(b));
 });
+
+// ---- P1-F6：hung 变化触发推送 ----
+
+test('signature changes when the hung flag changes', () => {
+  const a = stateSignature(snap());
+  const b = stateSignature(snap({
+    entries: [{ id: 'a', running: true, icon: 'data:x', hung: true, windows: [{ h: '1', t: 'T1', m: false, f: true }] }],
+  }));
+  assert.notEqual(a, b);
+});
+
+test('stable hung flag does not force repeated pushes', () => {
+  const p1 = snap({ entries: [{ id: 'a', running: true, icon: 'data:x', hung: true, windows: [{ h: '1', t: 'T1', m: false, f: true }] }] });
+  const p2 = snap({ entries: [{ id: 'a', running: true, icon: 'data:x', hung: true, windows: [{ h: '1', t: 'T1', m: false, f: true }] }] });
+  assert.equal(stateSignature(p1), stateSignature(p2));
+});
