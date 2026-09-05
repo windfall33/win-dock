@@ -647,6 +647,39 @@ function layoutTick() {
     s.vel = st.vel;
   }
 
+  // P2-F1b 拖拽避让弹簧：每个 app 槽位持有 {pos, vel} 偏移状态（挂 slotMap holder，
+  // rebuild 复用 DOM 时状态不丢），目标来自 shiftAmounts 的 ±1 槽位值。
+  // 拖拽结束后 shiftRelease 目标归零，弹簧自然回位，全部 settled 后清除。
+  let shiftBusy = false;
+  if (dragState || shiftRelease) {
+    const elsD = appSlotEls();
+    const shiftsD = dragState
+      ? shiftAmounts(dragState.insertIndex, dragState.originIndex, elsD.length)
+      : new Array(elsD.length).fill(0);
+    const stepD = OPT.iconSize + gapPx();
+    const vertD = isVert();
+    let allSettled = true;
+    elsD.forEach((el, i) => {
+      const holder = slotMap.get(el.dataset.id);
+      if (!holder) return;
+      const target = (shiftsD[i] || 0) * stepD;
+      if (!holder.shift) holder.shift = { pos: 0, vel: 0 };
+      const st = Spring.stepSpring(holder.shift.pos, holder.shift.vel, target, 0.22, 0.62);
+      holder.shift = { pos: st.pos, vel: st.vel };
+      if (Math.abs(st.pos) > 0.05) {
+        el.style.transform = vertD ? `translateY(${st.pos}px)` : `translateX(${st.pos}px)`;
+      } else {
+        el.style.transform = '';
+      }
+      if (!st.settled) allSettled = false;
+    });
+    if (!dragState && allSettled) {
+      shiftRelease = false;
+      elsD.forEach((el) => { el.style.transform = ''; });
+    }
+    shiftBusy = !!dragState || !allSettled;
+  }
+
   const vert = isVert();
   let maxSize = 0;
   for (const s of arr) {
@@ -675,7 +708,8 @@ function layoutTick() {
 
   const settled = arr.every(s => s.cur.scale === s.targetScale);
   const active = pointerInsideBar || Date.now() - lastInteractTs < 280;
-  return !settled || active;
+  // P2-F1b：避让弹簧未 settled 时不自停（回位动画播完才停 rAF）
+  return !settled || active || shiftBusy;
 }
 
 // vsync 对齐的 rAF 驱动（setInterval 精度 ~15.6ms 且不同步 vsync，动画必抖）；
@@ -1594,14 +1628,9 @@ function moveInternalDrag(ev) {
   }
   dragState.insertIndex = draggedOut ? -1 : best;
 
-  const step = OPT.iconSize + gapPx();
-  const shifts = shiftAmounts(dragState.insertIndex, dragState.originIndex, els.length);
-  els.forEach((el, i) => {
-    el.style.transition = 'transform .16s ease';
-    el.style.transform = shifts[i]
-      ? (vert ? `translateY(${shifts[i] * step}px)` : `translateX(${shifts[i] * step}px)`)
-      : '';
-  });
+  // P2-F1b：避让位移交给 layoutTick 的弹簧积分（每帧逼近目标），这里只更新
+  // 插入点/起点索引；不再直接写 transform，更不移除 CSS transition ——
+  // 双驱动会互相踩踏，位移变换由弹簧唯一驱动。
 }
 
 function shiftAmounts(insertAt, fromIndex, n) {
@@ -1614,16 +1643,17 @@ function shiftAmounts(insertAt, fromIndex, n) {
   return shifts;
 }
 
+// P2-F1b：拖拽结束后的回位中标志——目标归零由弹簧自然逼近，播完自清
+let shiftRelease = false;
+
 function endInternalDrag(_ev, cancelled) {
   const st = dragState;
   dragState = null;
   if (!st) return;
   ghostEl.classList.add('hidden');
-  // 清理所有在 DOM 内的 slot 样式（拖拽中 rebuild 后旧节点游离，快照清理会漏）
-  itemsEl.querySelectorAll('.slot').forEach(el => {
-    el.style.transform = ''; el.style.transition = ''; el.style.opacity = '';
-  });
-
+  // P2-F1b：不清 transform（弹簧回位中），只清理置灰；回位 settled 后统一清除
+  shiftRelease = true;
+  itemsEl.querySelectorAll('.slot').forEach(el => { el.style.opacity = ''; });
   mouseX = _ev ? _ev.clientX : -9999;
   ensureRaf();
 
