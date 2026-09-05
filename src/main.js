@@ -68,6 +68,12 @@ const DESKTOP_CLASSES = new Set([
 // P1-F2 键盘导航：触发 Ctrl+Alt+D 时的前台窗口（Esc 归还焦点用）
 let kbdReturnHwnd = '';
 
+// 调试/多实例支持：DOCK_USER_DATA 覆盖 userData 路径（独立的单实例锁与配置目录），
+// 便于在常驻安装版 Dock 旁边并行启动开发版冒烟，互不抢占锁、互不污染配置
+if (process.env.DOCK_USER_DATA) {
+  app.setPath('userData', process.env.DOCK_USER_DATA);
+}
+
 app.commandLine.appendSwitch('disable-gpu-vsync');
 // 常驻置顶透明窗口会被 Chromium 原生遮挡计算误判而节流，禁用之保动画丝滑
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
