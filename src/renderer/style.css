@@ -92,7 +92,9 @@ html, body {
   border-radius: 23%;
   filter: drop-shadow(0 2px 7px rgba(0, 0, 0, 0.20));
   transform-origin: bottom center;
-  transition: transform .15s ease, filter .15s ease;
+  /* P2-F2：不再 transition transform —— lift 由 JS 弹簧每帧写入，CSS 过渡会造成
+     双驱动滞后；filter 过渡保留（hover 阴影加深仍平滑） */
+  transition: filter .15s ease;
 }
 
 /* 图标倒影（macOS 经典观感）：仅底部 Dock，倒影向下淡出。

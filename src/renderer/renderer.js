@@ -689,14 +689,22 @@ function layoutTick() {
     // 槽位只沿主轴变尺寸（垂直条变高、水平条变宽），条厚保持恒定
     if (vert) s.el.style.height = size + 'px';
     else s.el.style.width = size + 'px';
+    // P2-F2 指示点锚定：lift 施加在 img（transform 不参与布局 → wrap 尺寸不变 →
+    // 指示点 bottom:-4px 锚定玻璃底座不动），macOS 观感：放大图标向上浮出、点留在底座。
+    // 侧栏 lift 改 X 轴，朝屏幕内侧浮出；slot 的 transform 归拖拽避让专用（互不踩踏）。
     const img = s.el.querySelector('img.app-icon');
     if (img) {
       img.style.width = size + 'px';
       img.style.height = size + 'px';
+      const lift = Math.round((size - base) * 0.14);
+      if (lift > 0) {
+        img.style.transform = vert
+          ? `translateX(${POS === 'left' ? lift : -lift}px)`
+          : `translateY(-${lift}px)`;
+      } else {
+        img.style.transform = '';
+      }
     }
-    // macOS 形态：放大时图标向上浮出底座，运行指示点随图标一起上移；静止时归零。
-    const lift = Math.round((size - base) * 0.14);
-    s.el.style.transform = lift > 0 ? `translateY(-${lift}px)` : '';
   }
   // 面板随放大增高（macOS 行为）：底边贴屏不动、顶边上移（dock-root 为
   // align-items:flex-end，改高即向上生长），放大图标不再穿出玻璃板。
