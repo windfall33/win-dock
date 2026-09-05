@@ -133,6 +133,13 @@ html[data-pos="bottom"] .slot canvas.app-icon {
   outline-offset: 2px;
 }
 
+/* P1-F2 键盘导航焦点态：1.15x 放大 + 圆角焦点环（与 :focus 环区分靠更粗描边） */
+.slot.kbd-focus img.app-icon {
+  transform: scale(1.15);
+  outline: 2.5px solid rgba(120,180,255,.95);
+  outline-offset: 3px;
+}
+
 /* 通知角标（从窗口标题括号计数提取，如微信 "微信 (3)"） */
 .slot .badge {
   position: absolute;

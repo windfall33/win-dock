@@ -698,6 +698,8 @@ let mouseProcQueued = false;
 
 function processMousePosition() {
   mouseProcQueued = false;
+  // P1-F2：鼠标移动进 Dock 即清除键盘焦点态（两套焦点视觉互不干扰）
+  if (kbdNavActive && pointerInsideBar) kbdNavClear();
   const barRect = barEl.getBoundingClientRect();
   const overBar = !dockHiddenNow && !fullscreenHideNow && pointOverBar(barRect, mouseX, mouseY);
 
@@ -1369,6 +1371,69 @@ document.addEventListener('keydown', (ev) => {
     const holder = slotMap.get(id);
     const entry = holder ? holder.entry : { kind: s.dataset.kind };
     handleClick(id, entry);
+  }
+});
+
+// ---------------------------------------------------------------- 键盘导航（P1-F2）
+
+// Ctrl+Alt+D 触发的键盘导航态：方向键/Home/End 移动，Enter/Space 激活（复用上面
+// 的 keydown 激活路径），Esc 归还焦点。与 Tab 循环并存；鼠标进 Dock 即退出本态。
+let kbdNavActive = false;
+
+function slotIdList() {
+  return [...itemsEl.children]
+    .filter((el) => el.dataset.kind)
+    .map((el) => el.dataset.id);
+}
+
+function kbdFocusApply(index) {
+  const els = [...itemsEl.children].filter((el) => el.dataset.kind);
+  els.forEach((el, i) => el.classList.toggle('kbd-focus', i === index));
+  if (index >= 0 && els[index]) {
+    els[index].focus();
+    requestLayout();
+  }
+}
+
+function kbdNavClear() {
+  kbdNavActive = false;
+  itemsEl.querySelectorAll('.slot.kbd-focus').forEach((el) => el.classList.remove('kbd-focus'));
+}
+
+window.dock.onFocusDock(() => {
+  kbdNavActive = true;
+  const ids = slotIdList();
+  // 默认首个可用槽位；若存在聚焦应用（前台窗口 f=true）则定位到其槽位
+  let target = KbdNav.homeIndex(ids);
+  const focusedEntry = (STATE && STATE.entries || []).find(
+    (e) => (e.windows || []).some((w) => w.f));
+  if (focusedEntry) {
+    const idx = ids.indexOf(focusedEntry.id);
+    if (idx >= 0 && !KbdNav.isDividerId(ids[idx])) target = idx;
+  }
+  kbdFocusApply(target);
+});
+
+document.addEventListener('keydown', (ev) => {
+  if (!kbdNavActive) return;
+  if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown' || ev.key === 'ArrowLeft' || ev.key === 'ArrowUp' ||
+      ev.key === 'Home' || ev.key === 'End') {
+    ev.preventDefault();
+    const ids = slotIdList();
+    const ae = document.activeElement;
+    const curIdx = ae && ae.dataset && ae.dataset.kind ? ids.indexOf(ae.dataset.kind === 'trash' ? '__trash__' : ae.dataset.id) : -1;
+    let next;
+    if (ev.key === 'Home') next = KbdNav.homeIndex(ids);
+    else if (ev.key === 'End') next = KbdNav.lastIndex(ids);
+    else {
+      const delta = (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') ? +1 : -1;
+      next = KbdNav.moveFocus(ids, curIdx, delta);
+    }
+    if (next >= 0) kbdFocusApply(next);
+  } else if (ev.key === 'Escape') {
+    ev.preventDefault();
+    kbdNavClear();
+    window.dock.invoke('focus-restore');
   }
 });
 

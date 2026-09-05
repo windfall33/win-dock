@@ -55,6 +55,8 @@ const SKIP_RECENT_HOSTS = new Set([
   'explorer.exe', 'searchhost.exe', 'shellexperiencehost.exe',
   'runtimebroker.exe', 'textinputhost.exe', 'applicationframehost.exe',
   'startmenuexperiencehost.exe', 'dwm.exe',
+  // P1-F2：键盘导航期间 Dock 窗口自身成为前台，不污染最近使用 LRU
+  'electron.exe', 'mac dock.exe',
 ]);
 
 // 桌面壳窗口类名：前台是这些类时 Dock 永远显示，忽略 autohide 与遮挡让位。
@@ -62,6 +64,9 @@ const SKIP_RECENT_HOSTS = new Set([
 const DESKTOP_CLASSES = new Set([
   'Progman', 'WorkerW', 'Shell_TrayWnd', 'SHELLDLL_DefView',
 ]);
+
+// P1-F2 键盘导航：触发 Ctrl+Alt+D 时的前台窗口（Esc 归还焦点用）
+let kbdReturnHwnd = '';
 
 app.commandLine.appendSwitch('disable-gpu-vsync');
 // 常驻置顶透明窗口会被 Chromium 原生遮挡计算误判而节流，禁用之保动画丝滑
@@ -781,6 +786,16 @@ async function handleInvoke(channel, p) {
       return { ok: true };
     }
 
+    case 'focus-restore': {
+      // P1-F2 键盘导航 Esc：焦点归还触发 Ctrl+Alt+D 前的前台窗口，Dock 恢复不抢焦点
+      try {
+        if (kbdReturnHwnd) await bridge.request('focus', { h: kbdReturnHwnd }, 3000);
+      } catch {}
+      try { if (dockWin && !dockWin.isDestroyed()) dockWin.setFocusable(false); } catch {}
+      kbdReturnHwnd = '';
+      return { ok: true };
+    }
+
     case 'kill-app': {
       await new Promise((res) => execFile('taskkill', ['/PID', String(p.pid), '/F'], () => res()));
       return { ok: true };
@@ -1036,6 +1051,21 @@ function registerShortcuts() {
     applyBounds();
     sendEnv();
     broadcastSettings();
+  });
+  // P1-F2 键盘导航：聚焦 Dock（对齐 macOS ⌥⌘D 一类直达快捷键）。
+  // 注册失败仅日志降级，不阻塞其他热键。
+  bind('CommandOrControl+Alt+D', async () => {
+    if (!dockWin || dockWin.isDestroyed()) return;
+    try {
+      const fg = await bridge.request('foreground', {}, 3000);
+      kbdReturnHwnd = fg && fg.h ? String(fg.h) : '';
+    } catch { kbdReturnHwnd = ''; }
+    try {
+      // dock 窗口 focusable:false（不抢焦点），键盘导航期间临时可聚焦
+      dockWin.setFocusable(true);
+      dockWin.focus();
+    } catch (e) { log('dock focus failed', e.message); }
+    dockWin.webContents.send('focus-dock');
   });
 }
 

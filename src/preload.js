@@ -28,5 +28,6 @@ contextBridge.exposeInMainWorld('dock', {
   onLaunchpadIcons: (cb) => ipcRenderer.on('launchpad-icons', (_e, s) => cb(s)),
   onExposeData: (cb) => ipcRenderer.on('expose-data', (_e, s) => cb(s)),
   onTopbarApp: (cb) => ipcRenderer.on('topbar-app', (_e, s) => cb(s)),
+  onFocusDock: (cb) => ipcRenderer.on('focus-dock', () => cb()),
   onGenie: (cb) => ipcRenderer.on('genie:animate', (_e, d) => cb(d)),
 });
