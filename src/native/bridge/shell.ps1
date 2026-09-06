@@ -112,3 +112,38 @@ function Invoke-Open($cid, $argsObj) {
         Emit $cid $true @{}
     } catch { Emit $cid $false @{ err = $_.Exception.Message } }
 }
+
+# ---- 登录时打开（macOS Dock 菜单「登录时打开」的 Windows 等价物）----
+# 实现：在用户启动文件夹（shell:startup）写入/删除指向应用的 .lnk。
+# 链接文件名取目标 basename（同 exe 多入口天然幂等）；非法字符替换为下划线。
+function Get-StartupLinkPath($exe) {
+    $bn = [System.IO.Path]::GetFileNameWithoutExtension([string]$exe)
+    if ([string]::IsNullOrWhiteSpace($bn)) { $bn = 'app' }
+    $safe = ($bn -replace '[\\/:*?"<>|]', '_')
+    return Join-Path ([Environment]::GetFolderPath('Startup')) ($safe + '.lnk')
+}
+
+function Invoke-StartupShortcutState($cid, $argsObj) {
+    try {
+        $p = Get-StartupLinkPath $argsObj.exe
+        Emit $cid $true @{ on = [bool](Test-Path -LiteralPath $p) }
+    } catch { Emit $cid $false @{ err = $_.Exception.Message } }
+}
+
+function Invoke-StartupShortcut($cid, $argsObj) {
+    try {
+        $p = Get-StartupLinkPath $argsObj.exe
+        if ([bool]$argsObj.on) {
+            if ([string]::IsNullOrWhiteSpace([string]$argsObj.target)) { throw 'no-target' }
+            $sh = New-Object -ComObject WScript.Shell
+            $sc = $sh.CreateShortcut($p)
+            $sc.TargetPath = [string]$argsObj.target
+            $a = [string]$argsObj.args
+            if (-not [string]::IsNullOrEmpty($a)) { $sc.Arguments = $a }
+            $sc.Save()
+        } else {
+            if (Test-Path -LiteralPath $p) { Remove-Item -LiteralPath $p -Force }
+        }
+        Emit $cid $true @{ on = [bool]$argsObj.on }
+    } catch { Emit $cid $false @{ err = $_.Exception.Message } }
+}

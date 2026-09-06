@@ -85,6 +85,8 @@ while ($true) {
         'list-start-menu' { Invoke-ListStartMenu $cid $argsObj }
         'list-dir'      { Invoke-ListDir $cid $argsObj }
         'resolve-shortcut' { Invoke-ResolveShortcut $cid $argsObj }
+        'startup-shortcut-state' { Invoke-StartupShortcutState $cid $argsObj }
+        'startup-shortcut' { Invoke-StartupShortcut $cid $argsObj }
 
         'focus' {
             try {

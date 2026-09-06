@@ -14,6 +14,8 @@ function render(s) {
     $('#magVal').textContent = Number(s.magnification).toFixed(2).replace(/\.?0+$/, '') + '×';
   }
   $('#autohide').classList.toggle('on', !!s.autohide);
+  $('#keepVisible').classList.toggle('on', !!s.keepVisible);
+  $('#showIndicators').classList.toggle('on', s.showIndicators !== false);
   $('#autologin').classList.toggle('on', !!s.launchAtLogin);
   $('#hideTaskbar').classList.toggle('on', !!s.hideTaskbar);
   $('#topbar').classList.toggle('on', s.showTopbar !== false);
@@ -57,6 +59,16 @@ $('#autohide').addEventListener('click', () => {
   const next = !$('#autohide').classList.contains('on');
   $('#autohide').classList.toggle('on', next);
   window.dock.invoke('set-setting', { key: 'autohide', value: next });
+});
+$('#keepVisible').addEventListener('click', () => {
+  const next = !$('#keepVisible').classList.contains('on');
+  $('#keepVisible').classList.toggle('on', next);
+  window.dock.invoke('set-setting', { key: 'keepVisible', value: next });
+});
+$('#showIndicators').addEventListener('click', () => {
+  const next = !$('#showIndicators').classList.contains('on');
+  $('#showIndicators').classList.toggle('on', next);
+  window.dock.invoke('set-setting', { key: 'showIndicators', value: next });
 });
 $('#autologin').addEventListener('click', () => {
   const next = !$('#autologin').classList.contains('on');

@@ -489,7 +489,7 @@ document.addEventListener('contextmenu', (ev) => {
         label: '排序方式',
         children: [
           { label: '名称' + (sortNow === 'name' ? '  ✓' : ''), action: () => hooks.switchStackSort(f, 'name') },
-          { label: '添加日期' + (sortNow === 'added' ? '  ✓' : ''), action: () => hooks.switchStackSort(f, 'added') },
+          { label: '修改日期' + ((sortNow === 'modified' || sortNow === 'added') ? '  ✓' : ''), action: () => hooks.switchStackSort(f, 'modified') },
           { label: '创建日期' + (sortNow === 'created' ? '  ✓' : ''), action: () => hooks.switchStackSort(f, 'created') },
           { label: '种类' + (sortNow === 'kind' ? '  ✓' : ''), action: () => hooks.switchStackSort(f, 'kind') },
         ],
@@ -505,13 +505,21 @@ document.addEventListener('contextmenu', (ev) => {
   }
   const holder = slotMap.get(slotEl.dataset.id);
   if (!holder || !holder.entry) return;
-  showAppMenu(ev.clientX, ev.clientY, holder.entry);
+  showAppMenu(ev.clientX, ev.clientY, holder.entry).catch(() => {});
 });
 
-function showAppMenu(x, y, entry) {
+async function showAppMenu(x, y, entry) {
   const defs = [];
   const wins = entry.windows || [];
   const iconUrl = entry.icon || letterTile(entry.name);
+  // 「登录时打开」当前态（macOS 选项子菜单项）：取不到按未开启显示，点击仍可切换
+  let loginOn = false;
+  if (entry.exe) {
+    try {
+      const st = await window.dock.invoke('get-login-open', { exe: entry.exe });
+      loginOn = !!(st && st.on);
+    } catch {}
+  }
 
   if (wins.length > 0) {
     for (const w of wins.slice(0, 9)) {
@@ -530,12 +538,22 @@ function showAppMenu(x, y, entry) {
     defs.push({ sep: true });
   }
 
-  // 「选项」二级子菜单（mac 对齐）：在资源管理器中显示 / 移除或固定
+  // 「选项」二级子菜单（mac 对齐）：在资源管理器中显示 / 登录时打开 / 移除或固定
   const options = [];
   if (entry.pinned && entry.exe) {
     options.push({
       label: '在资源管理器中显示',
       action: () => window.dock.invoke('reveal', { path: entry.exe }),
+    });
+  }
+  if (entry.exe) {
+    // UWP 宿主等无 exe 的条目不提供（无稳定启动目标可写启动文件夹）
+    options.push({
+      label: '登录时打开' + (loginOn ? '  ✓' : ''),
+      action: () => window.dock.invoke('set-login-open', {
+        exe: entry.exe, target: entry.launch || entry.exe,
+        args: entry.args || '', on: !loginOn,
+      }),
     });
   }
   if (entry.pinned) {

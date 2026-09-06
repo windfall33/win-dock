@@ -9,6 +9,7 @@ const INVOKE_OK = new Set([
   'open-settings', 'recent-remove', 'pick-folder', 'add-folder', 'list-dir', 'icon-data', 'open-path',
   'move-files', 'modifier-action', 'focus-restore',
   'set-stack-view', 'set-stack-sort',
+  'get-login-open', 'set-login-open',
   'window-thumb', 'launchpad-open', 'launchpad-close', 'launchpad-data', 'launchpad-launch',
   'expose-open', 'expose-close',
   'set-bar-rect',

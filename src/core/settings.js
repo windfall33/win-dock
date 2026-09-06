@@ -14,9 +14,13 @@ const DEFAULTS = {
   showTopbar: true,      // 顶部菜单栏（关闭可省一个渲染进程约 50MB）
   multidisplay: false,   // 多显示器：跟随鼠标所在屏幕
   occludeAway: true,     // 被窗口覆盖时自动让位（智能隐藏：最大化/铺满也收起；桌面与底边悬停常驻显示）
+  keepVisible: false,    // Dock 常驻（macOS 恒浮）：前台有应用窗口时也不自动收起，仅 autohide/全屏让位生效
   workareaReserve: false, // 工作区预留（SPI_SETWORKAREA 扣除 Dock 条，最大化窗口不压 Dock；仅主显示器）
   minimizeEffect: 'genie', // 最小化效果：genie | scale（macOS 两种效果）
   minimizeIntoIcon: false, // 最小化窗口收进对应应用图标（mac 的 Minimize window into app icon）
+  showIndicators: true,  // 运行指示点（macOS「Show indicators for open applications」，默认开）
+  showDelayMs: 150,      // 贴边唤回延迟 ms（对齐 macOS autohide-delay 语义；GUI 不暴露，config.json 可调）
+  hideDelayMs: 360,      // 指针离开后的收起延迟 ms（macOS 节奏位 autohide-time-modifier 的对应物，同上不进 GUI）
   recentApps: [],        // 最近打开应用 LRU
 };
 

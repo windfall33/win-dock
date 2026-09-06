@@ -8,7 +8,7 @@ const { createPinRoutes } = require('./ipc-pin-routes.js');
 const { createPinApp } = require('./core/pin-app.js');
 
 // set-setting 白名单：允许渲染层通过 IPC 写入的设置项
-const SETTING_KEYS = ['iconSize', 'magnification', 'autohide', 'position', 'launchAtLogin', 'appearance', 'hideTaskbar', 'showTopbar', 'multidisplay', 'occludeAway', 'minimizeEffect', 'minimizeIntoIcon', 'workareaReserve'];
+const SETTING_KEYS = ['iconSize', 'magnification', 'autohide', 'position', 'launchAtLogin', 'appearance', 'hideTaskbar', 'showTopbar', 'multidisplay', 'occludeAway', 'minimizeEffect', 'minimizeIntoIcon', 'workareaReserve', 'keepVisible', 'showIndicators'];
 
 function createIpcRoutes(ctx) {
   const { log } = ctx;
@@ -101,15 +101,35 @@ function createIpcRoutes(ctx) {
         return { ok: true };
       }
 
-      case 'open-with': { // 把拖进来的文件交给某个 Dock 应用打开
+      case 'open-with': { // 把拖进来的文件交给某个 Dock 应用打开（多文件全量传递）
         const args = typeof p.args === 'string'
           ? (p.args && p.args.trim() ? [p.args] : [])
           : (Array.isArray(p.args) ? p.args.slice() : []);
-        if (p.filePath) args.push(p.filePath);
+        const files = Array.isArray(p.filePaths)
+          ? p.filePaths.filter(Boolean).map(String)
+          : (p.filePath ? [String(p.filePath)] : []);
+        args.push(...files);
         const target = p.launch || p.exe;
         if (target) await launchTarget(target, args);
         return { ok: true };
       }
+
+      case 'get-login-open': {
+        // 「登录时打开」当前态：桥接慢/失败按未开启返回，菜单仍可切换
+        try {
+          const st = await ctx.bridge.request('startup-shortcut-state', { exe: String(p.exe || '') }, 3000);
+          return { ok: true, on: !!(st && st.on) };
+        } catch { return { ok: true, on: false }; }
+      }
+
+      case 'set-login-open':
+        await ctx.bridge.request('startup-shortcut', {
+          exe: String(p.exe || ''),
+          target: String(p.target || p.exe || ''),
+          args: String(p.args || ''),
+          on: !!p.on,
+        }, 8000);
+        return { ok: true };
 
       case 'focus-window':
         await ctx.bridge.request('focus', { h: p.h }, 5000);
@@ -128,6 +148,15 @@ function createIpcRoutes(ctx) {
         }
         return { ok: true };
       }
+
+      case 'close-window':
+        // 单窗关闭（悬停预览「×」/ 最小化方块「关闭」菜单）：此前渲染层一直在调
+        // 本通道但主进程只有复数 close-windows，两处入口实际无效。单窗失败静默
+        // （进程可能已退出），与批量路径的容错语义一致。
+        try {
+          await ctx.bridge.request('close-window', { h: p.h }, 3000);
+        } catch {}
+        return { ok: true };
 
       case 'close-windows': {
         for (const h of p.hs || []) {
@@ -336,6 +365,8 @@ function createIpcRoutes(ctx) {
         position: ctx.settings.get('position'),
         minimizeEffect: ctx.settings.get('minimizeEffect'),
         minimizeIntoIcon: !!ctx.settings.get('minimizeIntoIcon'),
+        keepVisible: !!ctx.settings.get('keepVisible'),
+        showIndicators: ctx.settings.get('showIndicators') !== false,
       });
     }
     if (ctx.settingsWin && !ctx.settingsWin.isDestroyed()) {
@@ -352,6 +383,8 @@ function createIpcRoutes(ctx) {
         position: ctx.settings.get('position'),
         minimizeEffect: ctx.settings.get('minimizeEffect'),
         minimizeIntoIcon: !!ctx.settings.get('minimizeIntoIcon'),
+        keepVisible: !!ctx.settings.get('keepVisible'),
+        showIndicators: ctx.settings.get('showIndicators') !== false,
       });
     }
   }

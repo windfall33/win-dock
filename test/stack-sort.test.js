@@ -25,6 +25,14 @@ test('sort by added uses mtime ascending', () => {
   assert.deepEqual(sortStackItems(items, 'added').map((x) => x.name), ['a', 'b', 'c']);
 });
 
+test('sort by modified uses mtime ascending; added kept as compat alias', () => {
+  const items = [
+    item('c', { mtime: 300 }), item('a', { mtime: 100 }), item('b', { mtime: 200 }),
+  ];
+  assert.deepEqual(sortStackItems(items, 'modified').map((x) => x.name), ['a', 'b', 'c']);
+  assert.deepEqual(sortStackItems(items, 'added').map((x) => x.name), ['a', 'b', 'c']);
+});
+
 test('sort by created uses ctime ascending', () => {
   const items = [
     item('x', { ctime: 30 }), item('y', { ctime: 10 }), item('z', { ctime: 20 }),

@@ -75,10 +75,13 @@ function createPollLoop(ctx) {
       try {
         const rp = await ctx.bridge.request('processes-running', { names: pinNames }, 8000);
         if (rp && rp.running) {
-          // 特征行为（与拆分前一致）：整体重新赋值 runningProc 引用；
-          // createSnapshotBuilder 的 deps 在 main.js 装配时捕获当时的引用，
-          // 此处重新赋值后 builder 仍见旧 Set —— 疑似缺陷，原样保留不修。
-          ctx.runningProc = new Set(Object.keys(rp.running).filter((k) => rp.running[k]));
+          // 必须原地更新（clear+add）：createSnapshotBuilder 的 deps 在 main.js
+          // 装配时捕获的是当时的 Set 引用，这里若整体重新赋值，builder 永远看到
+          // 旧的空 Set，托盘应用「运行中」判定会静默失效。
+          ctx.runningProc.clear();
+          for (const k of Object.keys(rp.running)) {
+            if (rp.running[k]) ctx.runningProc.add(k);
+          }
         }
       } catch {}
     }

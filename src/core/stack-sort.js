@@ -19,7 +19,9 @@ function sortStackItems(items, sortBy) {
   const arr = (Array.isArray(items) ? items : []).slice();
   if (sortBy === 'name') {
     arr.sort((a, b) => collator.compare(a.name, b.name));
-  } else if (sortBy === 'added') {
+  } else if (sortBy === 'added' || sortBy === 'modified') {
+    // 'added' 为历史键名保留兼容：桥接只能廉价拿到 mtime（修改时间），
+    // 无真正的「日期添加」shell 属性 —— UI 层展示为「修改日期」（macOS 项）
     arr.sort((a, b) => (a.mtime || 0) - (b.mtime || 0));
   } else if (sortBy === 'created') {
     arr.sort((a, b) => (a.ctime || 0) - (b.ctime || 0));

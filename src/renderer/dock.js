@@ -20,6 +20,8 @@ window.dock.onSettings((s) => {
     iconSize: s.iconSize,
     magnification: s.magnification,
     autohide: s.autohide,
+    keepVisible: !!s.keepVisible,
+    showIndicators: s.showIndicators !== false,
   });
   syncCssVars();
   syncAutohideTimer();
@@ -38,6 +40,10 @@ async function init() {
           iconSize: snap.settings.iconSize,
           magnification: snap.settings.magnification,
           autohide: !!snap.settings.autohide,
+          keepVisible: !!snap.settings.keepVisible,
+          showIndicators: snap.settings.showIndicators !== false,
+          showDelayMs: Number(snap.settings.showDelayMs) || 150,
+          hideDelayMs: Number(snap.settings.hideDelayMs) || 360,
         });
       }
     }
@@ -56,8 +62,9 @@ init();
 // =====================================================================
 
 function syncAutohideTimer() {
-  // 前台是应用时也始终启用「智能收起」，无需用户开启自动隐藏；桌面再按 autohide 设置。
-  const want = !!S.OPT.autohide || S.appActiveNow;
+  // 「Dock 常驻」开启时恒浮（仅 autohide / 全屏让位生效，对齐 macOS 恒浮行为）；
+  // 默认智能收起：前台是应用窗口时自动让位，无需用户开启自动隐藏
+  const want = !!S.OPT.autohide || (S.appActiveNow && !S.OPT.keepVisible);
   if (want && !S.autohideInterval) {
     S.autohideInterval = setInterval(autohidePoll, 220);
   } else if (!want && S.autohideInterval) {
@@ -72,7 +79,7 @@ function syncAutohideTimer() {
 
 function autohidePoll() {
   if (S.dockHiddenNow) return;
-  if (!S.OPT.autohide && !S.appActiveNow) return;   // 桌面且未开自动隐藏：不收起
+  if (!S.OPT.autohide && (!S.appActiveNow || S.OPT.keepVisible)) return;   // 桌面或常驻态：不收起
   const barRect = barEl.getBoundingClientRect();
   let nearDockZone;
   if (!isVert()) {
@@ -91,10 +98,12 @@ function autohidePoll() {
   }
   if (!S.autohideHideTimer) {
     // 应用在前台（非桌面）时更快收起，避免 dock 长时间挡在应用上；桌面则放缓。
+    // hideDelayMs 可在 config.json 调（macOS autohide 节奏位语义）
+    const delay = Math.max(80, Number(S.OPT.hideDelayMs) || 360);
     S.autohideHideTimer = setTimeout(() => {
       S.autohideHideTimer = null;
       window.dock.invoke('request-hide');
-    }, S.appActiveNow ? 240 : 480);
+    }, S.appActiveNow ? Math.round(delay * 0.7) : delay);
   }
 }
 

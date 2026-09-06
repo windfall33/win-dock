@@ -85,7 +85,23 @@
       <div class="toggle" id="autohide"></div>
     </div>
     <div class="row">
-      <div><div class="label">外观</div></div>
+      <div>
+        <div class="label">Dock 常驻（恒浮）</div>
+        <div class="hint">开启后前台有应用窗口也不自动收起（macOS 恒浮行为）；关闭则智能收起，把屏幕让给应用</div>
+      </div>
+      <div class="toggle" id="keepVisible"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">运行指示点</div>
+        <div class="hint">运行中的应用图标下方显示小圆点（macOS 设置项）</div>
+      </div>
+      <div class="toggle" id="showIndicators"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">外观</div>
+      </div>
       <select id="appearance">
         <option value="system">跟随系统</option>
         <option value="light">浅色</option>
@@ -144,7 +160,7 @@
     <div class="row">
       <div>
         <div class="label">全屏应用时让位</div>
-        <div class="hint">Dock 恒浮于普通窗口之上（含最大化/铺满不会让 Dock 隐藏）；仅当全屏应用时才自动收起，鼠标贴边可唤回。关闭则全屏时也保持显示</div>
+        <div class="hint">仅当真全屏应用时自动让位，鼠标贴边可唤回；普通窗口（含最大化）不触发遮挡隐藏。关闭则全屏时也保持显示</div>
       </div>
       <div class="toggle" id="occludeAway"></div>
     </div>
@@ -170,6 +186,7 @@
     把 .exe 或快捷方式拖到 Dock 上即可固定应用；<br>
     把文件拖到应用图标上用该应用打开，拖到底部废纸篓即删除到回收站。<br>
     快捷键：Ctrl+Shift+D 切换自动隐藏，Ctrl+Shift+M 切换放大，Ctrl+Shift+P 切换位置。<br>
+    进阶：config.json 可调 showDelayMs / hideDelayMs（贴边唤回与收起延迟，macOS autohide 节奏位语义）。<br>
     为获得最纯粹的体验，建议将 Windows 任务栏设置为「自动隐藏任务栏」。
   </div>
 

@@ -34,7 +34,20 @@ function pointOverBar(rect, mx, my) {
     my >= rect.top - S.OPT.iconSize && my <= rect.bottom + 4;
 }
 
-function computeTargets(mx, my) {
+// P2-F4 满屏自动压缩：图标基准总尺寸超出可用宽度/高度时全体等比缩小
+// （macOS 行为，下限 0.5 防缩到不可用）。用基准尺寸计算（不含放大态），
+// 避免与放大互馈震荡；分隔线槽按 17px（1px 线 + 两侧 8px margin）计。
+function computeFitScale(vert) {
+  let needed = 0;
+  for (const [, s] of slotMap) {
+    if (!s.el.isConnected) continue;
+    needed += s.el.dataset.kind === 'divider' ? 17 : (s.baseSize || S.OPT.iconSize);
+  }
+  const avail = (vert ? window.innerHeight : window.innerWidth) - 30;
+  return needed > avail ? Math.max(0.5, avail / needed) : 1;
+}
+
+function computeTargets(mx, my, fit) {
   const out = [];
   // P1-F3：分隔线拖宽期间冻结鱼眼放大，防止布局抖动
   if (S.fisheyeFrozen) {
@@ -50,7 +63,7 @@ function computeTargets(mx, my) {
   for (const [, s] of slotMap) {
     if (!s.el.isConnected) continue;
     if (!overBar) { out.push({ s, t: 1 }); continue; }
-    const BASE = s.baseSize || S.OPT.iconSize;
+    const BASE = (s.baseSize || S.OPT.iconSize) * fit;
     // 更贴近 macOS 的连续挤压：放大半径更大、衰减更平缓，过渡更丝滑。
     // 放大作用域更大，相邻图标挤压更连续（mac 观感）
     const R = BASE * 3.2;
@@ -80,7 +93,9 @@ function computeTargets(mx, my) {
 }
 
 function layoutTick() {
-  const targets = computeTargets(S.mouseX, S.mouseY);
+  const vert = isVert();
+  S.fitScale = computeFitScale(vert);
+  const targets = computeTargets(S.mouseX, S.mouseY, S.fitScale);
   for (const { s, t } of targets) s.targetScale = t;
 
   const arr = [...slotMap.values()].filter(s => s.el.isConnected);
@@ -95,7 +110,6 @@ function layoutTick() {
     s.cur.scale = st.pos;
     s.vel = st.vel;
   }
-
   // P2-F1b 拖拽避让弹簧：每个 app 槽位持有 {pos, vel} 偏移状态（挂 slotMap holder，
   // rebuild 复用 DOM 时状态不丢），目标来自 shiftAmounts 的 ±1 槽位值。
   // 拖拽结束后 S.shiftRelease 目标归零，弹簧自然回位，全部 settled 后清除。
@@ -105,7 +119,7 @@ function layoutTick() {
     const shiftsD = S.dragState
       ? shiftAmounts(S.dragState.insertIndex, S.dragState.originIndex, elsD.length)
       : new Array(elsD.length).fill(0);
-    const stepD = S.OPT.iconSize + gapPx();
+    const stepD = (S.OPT.iconSize + gapPx()) * (S.fitScale || 1);
     const vertD = isVert();
     let allSettled = true;
     elsD.forEach((el, i) => {
@@ -129,15 +143,20 @@ function layoutTick() {
     shiftBusy = !!S.dragState || !allSettled;
   }
 
-  const vert = isVert();
   let maxSize = 0;
   for (const s of arr) {
-    const base = s.baseSize || S.OPT.iconSize;
+    const base = (s.baseSize || S.OPT.iconSize) * S.fitScale;
     const size = Math.round(base * s.cur.scale);
     if (size > maxSize) maxSize = size;
-    // 槽位只沿主轴变尺寸（垂直条变高、水平条变宽），条厚保持恒定
-    if (vert) s.el.style.height = size + 'px';
-    else s.el.style.width = size + 'px';
+    // 槽位主轴随缩放变化（垂直条变高、水平条变宽）。侧栏时槽宽同步增长：
+    // items 交叉轴居中、玻璃板宽度自适应内容，板体随之朝屏幕内侧增宽
+    // （macOS 侧栏放大行为），放大图标不再横向穿出板外
+    if (vert) {
+      s.el.style.height = size + 'px';
+      s.el.style.width = size + 'px';
+    } else {
+      s.el.style.width = size + 'px';
+    }
     // P2-F2 指示点锚定：lift 施加在 img（transform 不参与布局 → wrap 尺寸不变 →
     // 指示点 bottom:-4px 锚定玻璃底座不动），macOS 观感：放大图标向上浮出、点留在底座。
     // 侧栏 lift 改 X 轴，朝屏幕内侧浮出；slot 的 transform 归拖拽避让专用（互不踩踏）。
@@ -158,7 +177,7 @@ function layoutTick() {
   // 面板随放大增高（macOS 行为）：底边贴屏不动、顶边上移（dock-root 为
   // align-items:flex-end，改高即向上生长），放大图标不再穿出玻璃板。
   if (!vert) {
-    const targetH = Math.max(S.OPT.iconSize + 18, maxSize + 10);
+    const targetH = Math.max(S.OPT.iconSize * (S.fitScale || 1) + 18, maxSize + 10);
     const curH = parseFloat(barEl.style.height) || 0;
     if (Math.abs(curH - targetH) >= 1) barEl.style.height = targetH + 'px';
   }
@@ -222,7 +241,7 @@ function processMousePosition() {
     S.wakeTimer = setTimeout(() => {
       S.wakeTimer = null;
       window.dock.invoke('request-show');
-    }, 150);
+    }, Math.max(0, Number(S.OPT.showDelayMs) || 150));   // 对齐 macOS autohide-delay 语义，config.json 可调
   } else if (!atEdge && S.wakeTimer) {
     clearTimeout(S.wakeTimer);
     S.wakeTimer = null;

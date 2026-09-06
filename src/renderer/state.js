@@ -8,7 +8,7 @@
 
 export const S = {
   STATE: null,
-  OPT: { iconSize: 52, magnification: 1.8, autohide: false },
+  OPT: { iconSize: 52, magnification: 1.8, autohide: false, keepVisible: false, showIndicators: true, showDelayMs: 150, hideDelayMs: 360 },
   POS: 'bottom',            // dock 位置：bottom | left | right（镜像主进程 settings.position）
   mouseX: -9999, mouseY: -9999,
   pointerInsideBar: false,
@@ -32,6 +32,7 @@ export const S = {
   springTimer: null,
   kbdNavActive: false,
   fisheyeFrozen: false,
+  fitScale: 1,              // P2-F4 满屏压缩系数（基准尺寸超出屏宽时 <1）
   shiftRelease: false,
   rafRunning: false,
   mouseProcQueued: false,
@@ -77,24 +78,7 @@ export const winCountPrev = new Map(); // 活动指示：记录每应用上次�
 export const bounceSet = new Set();
 
 // ---------------------------------------------------------------- settings
-'use strict';
-/* =====================================================================
-   macOS Dock for Windows — renderer
-   鱼眼放大 / 指示点 / tooltip / 右键菜单 / 拖拽排序 / 文件投放 / 自动隐藏
-   ===================================================================== */
-
-const itemsEl = $('#dock-items');
-const barEl = $('#dock-bar');
-const rootEl = $('#dock-root');
-const tooltipEl = $('#tooltip');
-const menuLayerEl = $('#menu-layer');
-const ghostEl = $('#drag-ghost');
-const previewEl = $('#preview-panel');
-const stackPanelEl = $('#stack-panel');
-
-const winCountPrev = new Map(); // 活动指示：记录每应用上次窗口数，检测新增窗口
-
-// ---------------------------------------------------------------- settings
+// 位置/尺寸/外观等设置项的应用与槽位基准尺寸同步
 
 export function isVert() {
   return S.POS === 'left' || S.POS === 'right';
@@ -108,6 +92,8 @@ export function applyPosClass() {
 
 export function syncCssVars() {
   rootEl.style.setProperty('--is', S.OPT.iconSize + 'px');
+  // 运行指示点开关（macOS「Show indicators for open applications」）：关=不渲染圆点
+  document.documentElement.classList.toggle('no-indicators', S.OPT.showIndicators === false);
   // 底部条高恒定（放大时图标浮出条外）；侧栏（左/右）条竖向撑满窗口，图标竖直排布
   barEl.style.height = isVert() ? '100%' : (S.OPT.iconSize + 18) + 'px';
   // P1-F3：iconSize 变化同步刷新槽位基准尺寸——holder 的 baseSize 是 append 时快照，
@@ -209,7 +195,7 @@ export function folderSvg() {
 }
 
 // =====================================================================
-function applyEnv(env) {
+export function applyEnv(env) {
   if (!env) return;
   S.dockHiddenNow = !!env.dockHidden;
   S.fullscreenHideNow = !!env.fullscreenHide;
@@ -260,6 +246,10 @@ window.dock.onState((snap) => {
     S.OPT.iconSize = snap.settings.iconSize || S.OPT.iconSize;
     S.OPT.magnification = snap.settings.magnification || S.OPT.magnification;
     S.OPT.autohide = !!snap.settings.autohide;
+    S.OPT.keepVisible = !!snap.settings.keepVisible;
+    S.OPT.showIndicators = snap.settings.showIndicators !== false;
+    S.OPT.showDelayMs = Number(snap.settings.showDelayMs) || 150;
+    S.OPT.hideDelayMs = Number(snap.settings.hideDelayMs) || 360;
     syncCssVars();
     hooks.syncAutohideTimer();
   }
@@ -582,6 +572,9 @@ export function appSlotEls() {
   return [...itemsEl.children].filter(el => el.dataset.kind === 'app' || el.dataset.kind === 'folder');
 }
 
+// 启动弹跳（macOS 语义：弹到应用就绪为止）。就绪判据：本条目或同 exe 的任意
+// 运行条目出现窗口（覆盖「最近区」点击与 alias→真实 exe 改名的情形）；
+// 封顶 3s：应用始终未出窗（启动器/无窗口进程）时停弹，避免无限弹跳。
 export function launchWithBounce(entry) {
   bounceSet.add(entry.id);
   const s = slotMap.get(entry.id);
@@ -589,11 +582,21 @@ export function launchWithBounce(entry) {
   window.dock.invoke('launch', {
     exe: entry.exe, launch: entry.launch || null, args: entry.args || [],
   }).catch(() => {});
-  setTimeout(() => {
-    bounceSet.delete(entry.id);
-    const ss = slotMap.get(entry.id);
-    if (ss) ss.el.classList.remove('bouncing');
-  }, 1500);
+  const t0 = Date.now();
+  const exeL = String(entry.exe || '').toLowerCase();
+  const timer = setInterval(() => {
+    const cur = (slotMap.get(entry.id) || {}).entry;
+    const ready = (S.STATE.entries || []).some((e) => (e.windows || []).length > 0 &&
+      (e.id === entry.id ||
+       (exeL && String(e.exe || '').toLowerCase() === exeL) ||
+       (cur && cur.exe && String(e.exe || '').toLowerCase() === String(cur.exe).toLowerCase())));
+    if (ready || Date.now() - t0 >= 3000) {
+      clearInterval(timer);
+      bounceSet.delete(entry.id);
+      const ss = slotMap.get(entry.id);
+      if (ss) ss.el.classList.remove('bouncing');
+    }
+  }, 180);
 }
 
 export function shiftAmounts(insertAt, fromIndex, n) {

@@ -11,6 +11,7 @@ import { showPreview, closeMenu, pulseTrash, cancelTooltip, playPoof } from './m
 // =====================================================================
 
 const stackIconCache = new Map();
+let stackCellClickSuppressed = false;   // P2-F5：拖出结束后的 click 抑制
 
 function closeStack() {
   stackPanelEl.classList.remove('on');
@@ -90,7 +91,7 @@ async function renderStack(folderPath, viewArg, sortByArg) {
     : (isSame ? S.stackCurrent.sortBy : 'name');
   const view = StackSort.stackViewMode(rawEntries.length, viewConf);
   const entries = StackSort.sortStackItems(rawEntries, sortBy);
-  S.stackCurrent = { path: folderPath, title: name, viewConf, sortBy, view };
+  S.stackCurrent = { path: folderPath, title: name, viewConf, sortBy, view, entries };
 
   stackPanelEl.innerHTML = '';
   const header = document.createElement('div');
@@ -122,6 +123,7 @@ async function renderStack(folderPath, viewArg, sortByArg) {
   for (const ent of entries) {
     const cell = document.createElement('div');
     cell.className = 'st-cell';
+    cell.__entry = ent;   // P2-F5 Stack 拖出：cell 携带条目身份（含 iconPath/isFolder）
     const img = document.createElement('img');
     img.draggable = false;
     cell.appendChild(img);
@@ -131,6 +133,7 @@ async function renderStack(folderPath, viewArg, sortByArg) {
     cell.appendChild(label);
     fetchStackIcon(ent.iconPath).then((url) => { if (img.isConnected) img.src = url; });
     cell.addEventListener('click', () => {
+      if (stackCellClickSuppressed) return;
       if (ent.isFolder) {
         renderStack(ent.iconPath);
       } else {
@@ -189,6 +192,127 @@ document.addEventListener('mousedown', (ev) => {
 document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape' && S.stackCurrent) closeStack();
 });
+
+// =====================================================================
+//  P2-F5 Stack 拖出（macOS 堆栈可拖出文件）：拖 Stack 单元到 Dock 槽位 —
+//  废纸篓=回收，应用=用该应用打开，文件夹=移入；拖到面板内子文件夹=移入
+// =====================================================================
+
+stackPanelEl.addEventListener('mousedown', (ev) => {
+  if (ev.button !== 0) return;
+  const cell = ev.target.closest('.st-cell');
+  if (!cell || !cell.__entry) return;
+  const entry = cell.__entry;
+  const startX = ev.clientX, startY = ev.clientY;
+  let dragging = false;
+
+  const highlightSlot = (hit) => {
+    if (S.extDragHighlight !== hit) {
+      clearExtHighlight();
+      S.extDragHighlight = hit;
+      if (hit) hit.classList.add('targeted');
+    }
+  };
+
+  const onMove = (mev) => {
+    if (!dragging) {
+      if (mev.buttons !== 1) { cleanup(); return; }
+      if (Math.abs(mev.clientX - startX) + Math.abs(mev.clientY - startY) < 6) return;
+      dragging = true;
+      const g = document.createElement('img');
+      g.src = (cell.querySelector('img') || {}).src || '';
+      g.style.width = '42px';
+      g.style.height = '42px';
+      ghostEl.innerHTML = '';
+      ghostEl.appendChild(g);
+      ghostEl.classList.remove('hidden');
+      ghostEl.style.opacity = '.92';
+      cell.style.opacity = '.35';
+    }
+    ghostEl.style.left = (mev.clientX - 21) + 'px';
+    ghostEl.style.top = (mev.clientY - 21) + 'px';
+    const inZone = pointInDropZone(barEl.getBoundingClientRect(), mev.clientX, mev.clientY);
+    highlightSlot(inZone ? hitAnySlot(mev.clientX, mev.clientY) : null);
+  };
+
+  const cleanup = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    ghostEl.classList.add('hidden');
+    cell.style.opacity = '';
+    clearExtHighlight();
+  };
+
+  const onUp = (mev) => {
+    const wasDragging = dragging;
+    cleanup();
+    if (!wasDragging) return;   // 未达拖拽阈值：按普通点击走 cell click
+    stackCellClickSuppressed = true;
+    setTimeout(() => { stackCellClickSuppressed = false; }, 0);
+
+    const slot = hitAnySlot(mev.clientX, mev.clientY);
+    if (slot) {
+      if (slot.dataset.kind === 'trash') {
+        pulseTrash();
+        window.dock.invoke('recycle-files', { paths: [entry.iconPath] });
+        return;
+      }
+      if (slot.dataset.kind === 'folder') {
+        const h = slotMap.get(slot.dataset.id);
+        const dest = h && h.entry && (h.entry.folderPath || h.entry.exe);
+        if (dest) window.dock.invoke('move-files', { dest, paths: [entry.iconPath] });
+        return;
+      }
+      const h = slotMap.get(slot.dataset.id);
+      if (h && h.entry && h.entry.exe) {
+        window.dock.invoke('open-with', {
+          exe: h.entry.exe, launch: h.entry.launch || null,
+          filePaths: [entry.iconPath], args: h.entry.args || [],
+        });
+      }
+      return;
+    }
+    // 拖到面板内的子文件夹单元 → 移入并刷新；面板背景/其他位置 → 不动作
+    const under = document.elementFromPoint(mev.clientX, mev.clientY);
+    const cellHit = under && under.closest ? under.closest('.st-cell') : null;
+    if (cellHit && cellHit.__entry && cellHit.__entry.isFolder && stackPanelEl.contains(cellHit)) {
+      window.dock.invoke('move-files', { dest: cellHit.__entry.iconPath, paths: [entry.iconPath] });
+      if (S.stackCurrent) renderStack(S.stackCurrent.path, S.stackCurrent.viewConf, S.stackCurrent.sortBy);
+    }
+  };
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+});
+
+// =====================================================================
+//  滚轮悬停（macOS scroll-to-open 的对齐）：
+//  滚轮悬停运行中应用图标 → Exposé 窗口总览；悬停文件夹 → 展开 Stack
+// =====================================================================
+
+let wheelExposeAt = 0;
+itemsEl.addEventListener('wheel', (ev) => {
+  const slot = ev.target.closest('.slot');
+  if (!slot) return;
+  const holder = slotMap.get(slot.dataset.id);
+  const entry = holder && holder.entry;
+  if (slot.dataset.kind === 'folder' && entry) {
+    ev.preventDefault();
+    openStack(entry.folderPath || entry.exe || '', holder.el, entry.stackView);
+    return;
+  }
+  if (slot.dataset.kind === 'app' && entry && (entry.windows || []).length > 0) {
+    // 滚轮事件流一秒可达数十次：一次手势只触发一次 Exposé
+    if (Date.now() - wheelExposeAt < 1200) return;
+    wheelExposeAt = Date.now();
+    ev.preventDefault();
+    window.dock.invoke('expose-open', {
+      appName: entry.name || '',
+      appIcon: entry.icon || '',
+      windows: entry.windows.slice(0, 24),
+    }).catch(() => {});
+  }
+}, { passive: false });
 
 // =====================================================================
 function activateEntry(entry) {
@@ -603,7 +727,7 @@ document.addEventListener('drop', (ev) => {
     if (holder && holder.entry && holder.entry.exe) {
       window.dock.invoke('open-with', {
         exe: holder.entry.exe, launch: holder.entry.launch || null,
-        filePath: paths[0], args: holder.entry.args || [],
+        filePaths: paths, args: holder.entry.args || [],
       });
     }
     return;

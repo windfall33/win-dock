@@ -68,7 +68,7 @@ function createPinRoutes(ctx) {
   function setStackSort(p) {
     // P1-F5 文件夹排序方式：名称 / 添加日期 / 创建日期 / 种类
     const stackPath = String(p.path || '');
-    const sortBy = ['name', 'added', 'created', 'kind'].includes(p.sortBy) ? p.sortBy : 'name';
+    const sortBy = ['name', 'added', 'modified', 'created', 'kind'].includes(p.sortBy) ? p.sortBy : 'name';
     const pins = ctx.settings.all.pins || [];
     const pin = pins.find((x) => x.kind === 'folder' && x.exe === stackPath);
     if (pin) { pin.stackSortBy = sortBy; ctx.settings.set('pins', pins); }

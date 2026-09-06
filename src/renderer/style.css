@@ -179,6 +179,8 @@ html[data-pos="bottom"] .slot canvas.app-icon {
   transition: opacity .25s ease, transform .15s ease;
 }
 .slot.running .running-dot { opacity: 1; }
+/* P2-F2 运行指示点开关（macOS 设置项）：关=整体不渲染 */
+html.no-indicators .slot .running-dot { display: none; }
 
 /* 活动指示：应用新开窗口时图标短暂泛蓝光 */
 @keyframes app-glow {
@@ -211,17 +213,20 @@ html.dark .divider {
     transparent, rgba(255,255,255,0.42) 22%, rgba(255,255,255,0.42) 78%, transparent);
 }
 
-/* 启动弹跳（macOS bounce）——有限两次衰减，逐次明显变矮 */
+/* 启动弹跳（macOS 语义：弹到应用就绪为止，JS 轮询到窗口出现后移除类，封顶 3s）。
+   启动期等高三连跳循环 + squash & stretch */
 @keyframes mac-bounce {
   0%   { transform: translateY(0) scaleY(1); }
-  14%  { transform: translateY(-22px) scaleY(1.04); }
-  28%  { transform: translateY(0) scaleY(.96); }
-  40%  { transform: translateY(-10px) scaleY(1.02); }
-  52%  { transform: translateY(0) scaleY(.98); }
-  60%  { transform: translateY(-3px) scaleY(1); }
-  68%,100% { transform: translateY(0) scaleY(1); }
+  12%  { transform: translateY(-24px) scaleY(1.05); }
+  25%  { transform: translateY(0) scaleY(.95); }
+  37%  { transform: translateY(-22px) scaleY(1.04); }
+  50%  { transform: translateY(0) scaleY(.96); }
+  62%  { transform: translateY(-20px) scaleY(1.03); }
+  75%  { transform: translateY(0) scaleY(.97); }
+  87%  { transform: translateY(-18px) scaleY(1.02); }
+  100% { transform: translateY(0) scaleY(1); }
 }
-.slot.bouncing img.app-icon { animation: mac-bounce 1.2s cubic-bezier(.28,.5,.4,1); }
+.slot.bouncing img.app-icon { animation: mac-bounce 1.2s cubic-bezier(.28,.5,.4,1) infinite; }
 
 /* ================= tooltip ================= */
 
@@ -556,24 +561,28 @@ html[data-pos="right"] .slot .running-dot {
   transform: translateY(-50%);
 }
 
-/* 垂直条：启动弹跳改为横向（朝屏幕内侧） */
+/* 垂直条：启动弹跳改为横向（朝屏幕内侧），与底部弹跳同为循环等高跳 */
 @keyframes mac-bounce-in-right {
   0%   { transform: translateX(0); }
   12%  { transform: translateX(26px); }
-  24%  { transform: translateX(0); }
-  33%  { transform: translateX(15px); }
-  41%  { transform: translateX(0); }
-  47%  { transform: translateX(6px); }
-  52%,100% { transform: translateX(0); }
+  25%  { transform: translateX(0); }
+  37%  { transform: translateX(24px); }
+  50%  { transform: translateX(0); }
+  62%  { transform: translateX(22px); }
+  75%  { transform: translateX(0); }
+  87%  { transform: translateX(20px); }
+  100% { transform: translateX(0); }
 }
 @keyframes mac-bounce-in-left {
   0%   { transform: translateX(0); }
   12%  { transform: translateX(-26px); }
-  24%  { transform: translateX(0); }
-  33%  { transform: translateX(-15px); }
-  41%  { transform: translateX(0); }
-  47%  { transform: translateX(-6px); }
-  52%,100% { transform: translateX(0); }
+  25%  { transform: translateX(0); }
+  37%  { transform: translateX(-24px); }
+  50%  { transform: translateX(0); }
+  62%  { transform: translateX(-22px); }
+  75%  { transform: translateX(0); }
+  87%  { transform: translateX(-20px); }
+  100% { transform: translateX(0); }
 }
 html[data-pos="left"] .slot.bouncing img.app-icon { animation-name: mac-bounce-in-right; }
 html[data-pos="right"] .slot.bouncing img.app-icon { animation-name: mac-bounce-in-left; }

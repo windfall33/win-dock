@@ -85,32 +85,55 @@ function createPanelWindows(ctx) {
     });
   }
 
+  // Launchpad 应用列表缓存：60s TTL + 过期后台重扫（stale-while-revalidate）。
+  // 全量扫描开始菜单 .lnk 是秒级操作，每次打开都重扫会拖慢启动台；永不重扫则
+  // 新装应用要重启 Dock 才出现。重扫结果下次打开生效（渲染层已持旧表）。
+  const LP_TTL_MS = 60000;
+  let lpScanInFlight = null;
+  let lpAppsAt = 0;
+
+  async function rescanLaunchpadApps() {
+    if (lpScanInFlight) return lpScanInFlight;
+    lpScanInFlight = (async () => {
+      try {
+        const res = await ctx.bridge.request('list-start-menu', {}, 30000);
+        const seen = new Set();
+        ctx.launchpadApps = (res.apps || [])
+          .filter((a) => a.target)
+          .filter((a) => {
+            const key = a.name + '→' + String(a.target).toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .map((a, i) => ({
+            id: 'lp:' + i,
+            name: a.name,
+            target: a.target,
+            args: a.args || '',
+            iconPath: ctx.normalizeIconSource(a.iconLocation, a.target),
+            icon: null,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
+      } catch (e) {
+        log('list-start-menu failed:', e.message);
+        if (!ctx.launchpadApps) ctx.launchpadApps = [];
+      } finally {
+        // 失败同样计时：避免每次打开都撞 30s 超时；TTL 到期后自然重试
+        lpAppsAt = Date.now();
+        lpScanInFlight = null;
+      }
+    })();
+    return lpScanInFlight;
+  }
+
   async function getLaunchpadApps() {
-    if (ctx.launchpadApps) return ctx.launchpadApps;
-    try {
-      const res = await ctx.bridge.request('list-start-menu', {}, 30000);
-      const seen = new Set();
-      ctx.launchpadApps = (res.apps || [])
-        .filter((a) => a.target)
-        .filter((a) => {
-          const key = a.name + '→' + String(a.target).toLowerCase();
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        })
-        .map((a, i) => ({
-          id: 'lp:' + i,
-          name: a.name,
-          target: a.target,
-          args: a.args || '',
-          iconPath: ctx.normalizeIconSource(a.iconLocation, a.target),
-          icon: null,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
-    } catch (e) {
-      log('list-start-menu failed:', e.message);
-      ctx.launchpadApps = [];
+    if (ctx.launchpadApps && Date.now() - lpAppsAt < LP_TTL_MS) return ctx.launchpadApps;
+    if (ctx.launchpadApps) {
+      rescanLaunchpadApps().catch(() => {});
+      return ctx.launchpadApps;
     }
+    await rescanLaunchpadApps();
     return ctx.launchpadApps;
   }
 
