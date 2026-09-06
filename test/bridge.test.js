@@ -11,7 +11,13 @@ const BRIDGE = path.join(__dirname, '..', 'src', 'native', 'bridge.ps1');
 function startBridge() {
   const proc = spawn('powershell.exe', [
     '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', BRIDGE,
-  ], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+  ], {
+    windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
+    // 桥接的父进程存活自检依赖 DOCK_PARENT_PID：测试进程若从被污染的环境
+    // 继承到一个死 PID，桥接会在主循环第一拍 break 退出、全部用例超时。
+    // 这里强制置空，让用例不依赖外壳环境的杂散变量。
+    env: { ...process.env, DOCK_PARENT_PID: '' },
+  });
   const lines = [];
   let buf = '';
   proc.stdout.setEncoding('utf8');

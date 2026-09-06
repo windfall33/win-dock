@@ -96,7 +96,7 @@ function createIpcRoutes(ctx) {
         const target = p.launch || p.exe;
         if (target) {
           const args = p.args !== undefined && p.args !== null ? p.args : [];
-          await launchTarget(target, args);
+          await appActions.launchTarget(target, args);
         }
         return { ok: true };
       }
@@ -110,7 +110,7 @@ function createIpcRoutes(ctx) {
           : (p.filePath ? [String(p.filePath)] : []);
         args.push(...files);
         const target = p.launch || p.exe;
-        if (target) await launchTarget(target, args);
+        if (target) await appActions.launchTarget(target, args);
         return { ok: true };
       }
 
@@ -276,7 +276,7 @@ function createIpcRoutes(ctx) {
       case 'open-path':
         {
           const target = String(p.path || '');
-          await launchTarget(target, []);
+          await appActions.launchTarget(target, []);
         }
         return { ok: true };
 
@@ -318,7 +318,7 @@ function createIpcRoutes(ctx) {
         return { ok: true };
 
       case 'launchpad-launch': {
-        await launchTarget(p.target, p.args || '');
+        await appActions.launchTarget(p.target, p.args || '');
         ctx.closeLaunchpad();
         return { ok: true };
       }

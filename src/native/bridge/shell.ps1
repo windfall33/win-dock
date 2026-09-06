@@ -78,8 +78,11 @@ function Invoke-Open($cid, $argsObj) {
         $argStr = $null
         $a = @()
         try {
-            if ($argsObj.args -is [string]) { $argStr = [string]$argsObj.args }
-            else { $a = @($argsObj.args) | ForEach-Object { [string]$_ } }
+            # args 缺省/为 null 时必须保持 $a 为空数组：@($null) 会变成含一个
+            # 空串元素的数组，令下方的 -ArgumentList '' 触发参数验证失败（静默打不开）
+            if ($null -eq $argsObj.args) { $a = @() }
+            elseif ($argsObj.args -is [string]) { $argStr = [string]$argsObj.args }
+            else { $a = @($argsObj.args) | ForEach-Object { [string]$_ } | Where-Object { $_ -and $_.Trim().Length -gt 0 } }
         } catch { $a = @() }
         if ($t -like 'shell:*') {
             # shell 命名空间（回收站等）用 explorer 打开

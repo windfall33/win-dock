@@ -86,7 +86,7 @@ npm run dist       # 打包（NSIS 安装器 + win-unpacked）
 
 ### 打包说明
 
-- 产物在 `dist/`：`Win Dock Setup 1.1.0.exe`（安装器）与 `win-unpacked/`（免安装目录）。
+- 产物在 `dist/`：`Win Dock Setup 1.1.1.exe`（安装器）与 `win-unpacked/`（免安装目录）。
 - 打包后 `app.isPackaged = true`，开机自启注册到 `Win Dock.exe` 本体；
   从开发版切换到打包版后，请在设置里把「开机自动启动」关一次再开一次，
   让注册表指向新路径。
