@@ -32,14 +32,19 @@ function createPollLoop(ctx) {
 
   let pollBusy = false;
 
+  // 自适应轮询：状态签名变化后短暂进入快速档（应用启动/关闭/切窗尽快可见），
+  // 稳定后回落到慢档降低桥接往返。返回 {changed} 供主进程调度下一次。
   async function pollOnce() {
-    if (pollBusy || !ctx.bridge) return;
+    if (pollBusy || !ctx.bridge) return { changed: false, skipped: true };
 
     pollBusy = true;
     try {
-      await pollInner();
+      const changed = await pollInner();
+      if (changed) ctx.lastStateChangeTs = Date.now();
+      return { changed: !!changed };
     } catch (e) {
       log('poll error:', e.message);
+      return { changed: false };
     } finally {
       pollBusy = false;
     }
@@ -55,7 +60,7 @@ function createPollLoop(ctx) {
       winList = Array.isArray(res) ? res : [];
     } catch (e) {
       log('enum-windows failed:', e.message);
-      return;
+      return false;
     }
 
     // 前台标志 f 已在 enum-windows 枚举时写入，无需再发一次 foreground 往返
@@ -89,9 +94,10 @@ function createPollLoop(ctx) {
     const snap = ctx.snapshotBuilder.build(winList, true);
 
     // 立即推送（图标已在快照里同步取缓存；仅新增应用首帧后异步补齐再推一次）
-    pushState(snap);
+    const first = pushState(snap);
     await fetchIconsFor([...snap.entries, ...(snap.minimized || []), ...(snap.recent || [])]);
-    pushState(snap);
+    const second = pushState(snap);
+    return first || second;
   }
 
   async function fetchIconsFor(entries) {
@@ -215,28 +221,36 @@ function createPollLoop(ctx) {
   let lastPayloadHash = '';
 
   function pushState(snap) {
-    if (!ctx.dockWin || ctx.dockWin.isDestroyed()) return;
+    const wins = [];
+    if (ctx.forEachDockWin) ctx.forEachDockWin((w) => wins.push(w));
+    else if (ctx.dockWin && !ctx.dockWin.isDestroyed()) wins.push(ctx.dockWin);
+    if (!wins.length) return false;
     const hash = stateSignature(snap);
     if (hash !== lastPayloadHash) {
       lastPayloadHash = hash;
-      // env 一并随 state 推送，渲染层 onState 处理；隐藏/显示的即时反馈走 sendEnv
-      ctx.dockWin.webContents.send('state', snap);
+      for (const w of wins) w.webContents.send('state', snap);
+      return true;
     }
+    // 签名未变：仍要给新建的多屏窗口补一帧（刚创建时 lastPayloadHash 已是该值）
+    return false;
   }
 
   function sendEnv() {
-    if (ctx.dockWin && !ctx.dockWin.isDestroyed()) {
-      const m = ctx.dockMetrics();
-      ctx.dockWin.webContents.send('env', {
-        dockHidden: !ctx.onDesktopNow && ctx.dockHiddenByUs && !ctx.mouseAtBottom,
-        fullscreenHide: ctx.fullscreenHide && !ctx.mouseAtBottom,
-        coveredHide: ctx.coveredHideNow && !ctx.mouseAtBottom,
-        pointerNearDock: ctx.pointerNearDock === null ? true : ctx.pointerNearDock,
-        appActive: !ctx.onDesktopNow,
-        position: m.pos,
-        edgeInset: m.edgeInset,
-      });
-    }
+    const wins = [];
+    if (ctx.forEachDockWin) ctx.forEachDockWin((w) => wins.push(w));
+    else if (ctx.dockWin && !ctx.dockWin.isDestroyed()) wins.push(ctx.dockWin);
+    if (!wins.length) return;
+    const m = ctx.dockMetrics();
+    const env = {
+      dockHidden: !ctx.onDesktopNow && ctx.dockHiddenByUs && !ctx.mouseAtBottom,
+      fullscreenHide: ctx.fullscreenHide && !ctx.mouseAtBottom,
+      coveredHide: ctx.coveredHideNow && !ctx.mouseAtBottom,
+      pointerNearDock: ctx.pointerNearDock === null ? true : ctx.pointerNearDock,
+      appActive: !ctx.onDesktopNow,
+      position: m.pos,
+      edgeInset: m.edgeInset,
+    };
+    for (const w of wins) w.webContents.send('env', env);
   }
 
   return { pollOnce, checkOcclusion, pushState, sendEnv, fetchIconsFor };

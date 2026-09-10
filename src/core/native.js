@@ -88,6 +88,13 @@ class NativeBridge {
         this.log('bad-json: ' + line.slice(0, 160));
         continue;
       }
+      // 无 id 的异步事件（WinEvent）：转发给主进程，驱动即时 poll
+      if (!msg.id && msg.type === 'win-event') {
+        if (typeof this.onWinEvent === 'function') {
+          try { this.onWinEvent(msg); } catch {}
+        }
+        continue;
+      }
       const entry = this.pending.get(String(msg.id));
       if (!entry) continue;
       clearTimeout(entry.timer);
@@ -188,7 +195,19 @@ class IconCache {
     this.failed.add(k);
     return null;
   }
-  logSafe(m) { /* noop */ }
+  logSafe(m) {
+    // 节流写入图标失败日志（同一消息 5s 内只记一条），排查「图标缺失」时有线索。
+    // 失败本身不抛：图标是增强信息，缺失不应阻断主流程。
+    try {
+      const fs = require('fs');
+      const now = Date.now();
+      if (this._lastLogAt && now - this._lastLogAt < 5000 && this._lastLogMsg === m) return;
+      this._lastLogAt = now;
+      this._lastLogMsg = m;
+      const line = `[${new Date(now).toISOString()}] ${m}\n`;
+      fs.appendFileSync(path.join(this.dir, '..', 'icon-cache.log'), line, 'utf8');
+    } catch { /* 日志失败静默 */ }
+  }
 }
 
 module.exports = { NativeBridge, IconCache };

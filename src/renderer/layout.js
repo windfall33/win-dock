@@ -275,8 +275,8 @@ document.addEventListener('mouseleave', () => {
 // =====================================================================
 // ---------------------------------------------------------------- 分隔线拖宽（P1-F3）
 
-// 主分隔线拖拽调整图标尺寸：36–72px 与设置滑块同范围，写回走 set-setting（iconSize），
-// 设置面板数值经 broadcastSettings 双向同步。
+// 主分隔线拖拽调整图标尺寸：24–128px 与设置滑块同范围（对齐 macOS 16–128），
+// 写回走 set-setting（iconSize），设置面板数值经 broadcastSettings 双向同步。
 // 拖动期间冻结鱼眼（computeTargets 全部回静止态）防止布局抖动；mouseup 解除。
 
 export function startDividerResize(ev) {
@@ -295,7 +295,7 @@ export function startDividerResize(ev) {
     else if (S.POS === 'left') raw = origin - mev.clientX;            // 向左（屏幕外）= 增大
     else raw = mev.clientX - origin;                                // 向右（屏幕外）= 增大
     // 每累计 4px 位移 = 1 级图标尺寸
-    const next = Math.min(72, Math.max(36, startSize + Math.round(raw / 4)));
+    const next = Math.min(128, Math.max(24, startSize + Math.round(raw / 4)));
     if (next !== S.OPT.iconSize) {
       window.dock.invoke('set-setting', { key: 'iconSize', value: next });
     }

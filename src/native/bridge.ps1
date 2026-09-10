@@ -1,4 +1,4 @@
-﻿# win-dock native bridge
+# win-dock native bridge
 # Persistent helper process. Speaks NDJSON over stdin/stdout.
 # Request : {"id":"n","cmd":"...","args":{...}}
 # Response: {"id":"n","ok":true/false,"data":{...}}
@@ -18,6 +18,9 @@ $ErrorActionPreference = 'Continue'
 . (Join-Path $PSScriptRoot 'bridge\fs.ps1')
 . (Join-Path $PSScriptRoot 'bridge\taskbar.ps1')
 
+# 事件驱动：WinEvent 线程异步写 win-event 行（无 id），主进程收到即触发 pollOnce
+try { [NativeOps]::StartWinEvents() } catch {}
+
 function Emit($id, $ok, $data) {
     $r = @{ id = $id; ok = $ok }
     if ($null -ne $data) {
@@ -28,7 +31,15 @@ function Emit($id, $ok, $data) {
             else { $r.err = 'bridge-error' }
         }
     }
-    [Console]::Out.WriteLine(($r | ConvertTo-Json -Compress -Depth 6))
+    $line = ($r | ConvertTo-Json -Compress -Depth 6)
+    # 与 WinEvent 线程共用输出锁，避免半行交错
+    if ([NativeOps]::OutLock) {
+        [System.Threading.Monitor]::Enter([NativeOps]::OutLock)
+        try { [Console]::Out.WriteLine($line) }
+        finally { [System.Threading.Monitor]::Exit([NativeOps]::OutLock) }
+    } else {
+        [Console]::Out.WriteLine($line)
+    }
 }
 
 while ($true) {
@@ -63,9 +74,10 @@ while ($true) {
             if ($out -eq '[]' -and [NativeOps]::LastErr) {
                 Emit $cid $false @{ err = 'enum: ' + [NativeOps]::LastErr }
             } else {
-                [Console]::Out.Write("{""id"":""$cid"",""ok"":true,""data"":")
-                [Console]::Out.Write($out)
-                [Console]::Out.WriteLine("}")
+                $line = "{""id"":""$cid"",""ok"":true,""data"":$out}"
+                [System.Threading.Monitor]::Enter([NativeOps]::OutLock)
+                try { [Console]::Out.WriteLine($line) }
+                finally { [System.Threading.Monitor]::Exit([NativeOps]::OutLock) }
             }
         }
 

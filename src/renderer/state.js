@@ -91,16 +91,23 @@ export function applyPosClass() {
 }
 
 export function syncCssVars() {
-  rootEl.style.setProperty('--is', S.OPT.iconSize + 'px');
+  const isz = S.OPT.iconSize;
+  rootEl.style.setProperty('--is', isz + 'px');
+  // 大图标（>72）时条内边距等比放大，避免 128px 图标挤在固定 padding 里显得局促
+  const padH = Math.round(Math.max(12, isz * 0.22));
+  const padV = Math.round(Math.max(6, isz * 0.10));
+  barEl.style.setProperty('--bar-pad-x', padH + 'px');
+  barEl.style.setProperty('--bar-pad-y', padV + 'px');
+  barEl.style.borderRadius = Math.round(Math.max(18, isz * 0.42)) + 'px';
   // 运行指示点开关（macOS「Show indicators for open applications」）：关=不渲染圆点
   document.documentElement.classList.toggle('no-indicators', S.OPT.showIndicators === false);
   // 底部条高恒定（放大时图标浮出条外）；侧栏（左/右）条竖向撑满窗口，图标竖直排布
-  barEl.style.height = isVert() ? '100%' : (S.OPT.iconSize + 18) + 'px';
+  barEl.style.height = isVert() ? '100%' : (isz + 18) + 'px';
   // P1-F3：iconSize 变化同步刷新槽位基准尺寸——holder 的 baseSize 是 append 时快照，
   // 不随 rebuild 更新，拖宽/滑块调整后 layoutTick 会拿旧基准算放大，必须在此同步
   for (const [, s] of slotMap) {
     const k = s.el.dataset.kind;
-    s.baseSize = (k === 'recent' || k === 'min') ? Math.round(S.OPT.iconSize * 0.72) : S.OPT.iconSize;
+    s.baseSize = (k === 'recent' || k === 'min') ? Math.round(isz * 0.72) : isz;
   }
 }
 
@@ -216,7 +223,7 @@ export function applyEnv(env) {
   // 让位隐藏（全屏/覆盖）：仅鼠标停留 Dock 保持区时才暂不隐藏（macOS 压边 dock 保持），
   // 鼠标真正离开 dock 区才让位；这样既不误唤醒，也不在边缘来回抽。
   const letHide = S.fullscreenHideNow || S.coveredHideNow;
-  const hide = S.dockHiddenNow || (letHide && !dockStayZone());
+  const hide = S.dockHiddenNow || (letHide && !hooks.dockStayZone());
   rootEl.classList.toggle('hidden-away', hide);
   // 隐藏时整窗必须穿透，探针负责唤回
   if (hide && S.pointerInsideBar) {
@@ -229,7 +236,7 @@ export function applyEnv(env) {
   //   不会再用陈旧的 false 把刚唤醒的 Dock 打回穿透）
   // 菜单/预览/Stack 打开时不能收回穿透：否则点空白处关不掉弹层（弹层会永久卡住）。
   const overlayOpen = S.menuOpen || !!S.stackCurrent || !!S.previewState;
-  if (env.pointerNearDock === false && !overlayOpen && !dockStayZone() &&
+  if (env.pointerNearDock === false && !overlayOpen && !hooks.dockStayZone() &&
       (S.pointerInsideBar || S.mouseX > -1000)) {
     S.pointerInsideBar = false;
     S.mouseX = -9999; S.mouseY = -9999;
@@ -335,6 +342,10 @@ function makeAppSlot(entry) {
   img.className = 'app-icon';
   img.draggable = false;
   wrap.appendChild(img);
+  // 下载/传输进度环（NSDockTile progress 对等近似；无数据时隐藏）
+  const ring = document.createElement('div');
+  ring.className = 'progress-ring';
+  wrap.appendChild(ring);
   const badge = document.createElement('div');
   badge.className = 'badge';
   wrap.appendChild(badge);
@@ -476,6 +487,17 @@ function applyEntryToSlot(slot, entry) {
     const n = entry.badge | 0;
     badgeEl.textContent = n > 99 ? '99+' : (n > 0 ? String(n) : '');
     badgeEl.classList.toggle('on', n > 0);
+  }
+  const ringEl = slot.querySelector('.progress-ring');
+  if (ringEl) {
+    const p = entry.progress;
+    if (typeof p === 'number' && p > 0 && p < 1) {
+      const deg = Math.round(p * 360);
+      ringEl.style.setProperty('--deg', deg + 'deg');
+      ringEl.classList.add('on');
+    } else {
+      ringEl.classList.remove('on');
+    }
   }
 }
 

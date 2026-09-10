@@ -15,7 +15,9 @@ function render(s) {
   }
   $('#autohide').classList.toggle('on', !!s.autohide);
   $('#keepVisible').classList.toggle('on', !!s.keepVisible);
+  $('#dockPerDisplay').classList.toggle('on', !!s.dockPerDisplay);
   $('#showIndicators').classList.toggle('on', s.showIndicators !== false);
+  $('#showRecents').classList.toggle('on', s.showRecents !== false);
   $('#autologin').classList.toggle('on', !!s.launchAtLogin);
   $('#hideTaskbar').classList.toggle('on', !!s.hideTaskbar);
   $('#topbar').classList.toggle('on', s.showTopbar !== false);
@@ -65,10 +67,20 @@ $('#keepVisible').addEventListener('click', () => {
   $('#keepVisible').classList.toggle('on', next);
   window.dock.invoke('set-setting', { key: 'keepVisible', value: next });
 });
+$('#dockPerDisplay').addEventListener('click', () => {
+  const next = !$('#dockPerDisplay').classList.contains('on');
+  $('#dockPerDisplay').classList.toggle('on', next);
+  window.dock.invoke('set-setting', { key: 'dockPerDisplay', value: next });
+});
 $('#showIndicators').addEventListener('click', () => {
   const next = !$('#showIndicators').classList.contains('on');
   $('#showIndicators').classList.toggle('on', next);
   window.dock.invoke('set-setting', { key: 'showIndicators', value: next });
+});
+$('#showRecents').addEventListener('click', () => {
+  const next = !$('#showRecents').classList.contains('on');
+  $('#showRecents').classList.toggle('on', next);
+  window.dock.invoke('set-setting', { key: 'showRecents', value: next });
 });
 $('#autologin').addEventListener('click', () => {
   const next = !$('#autologin').classList.contains('on');

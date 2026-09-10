@@ -211,3 +211,33 @@ test('not-running pinned app reports hung=false', () => {
   const snap = b.build([], false);
   assert.equal(snap.entries.find((x) => x.id === 'p1').hung, false);
 });
+
+test('showRecents=false hides the recent section entirely', () => {
+  const b = makeBuilder({
+    settings: {
+      showRecents: false,
+      recentApps: [
+        { id: 'r1', name: 'Chrome', exe: 'C:\\chrome.exe', ts: 1 },
+        { id: 'r2', name: 'Code', exe: 'C:\\code.exe', ts: 2 },
+      ],
+    },
+  });
+  const snap = b.build([], false);
+  assert.deepEqual(snap.recent, []);
+  assert.equal(snap.settings.showRecents, false);
+});
+
+test('showRecents defaults to true and still projects LRU entries', () => {
+  const b = makeBuilder({
+    settings: {
+      recentApps: [
+        { id: 'r1', name: 'Chrome', exe: 'C:\\chrome.exe', ts: 3 },
+        { id: 'r2', name: 'Code', exe: 'C:\\code.exe', ts: 2 },
+      ],
+    },
+  });
+  const snap = b.build([], false);
+  assert.equal(snap.settings.showRecents, true);
+  assert.equal(snap.recent.length, 2);
+  assert.equal(snap.recent[0].name, 'Chrome');
+});

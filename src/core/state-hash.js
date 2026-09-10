@@ -6,6 +6,7 @@ function stateSignature(snap) {
   return JSON.stringify([
     (s.entries || []).map((e) => [
       e.id, e.running, e.icon ? 1 : 0, e.badge || 0, e.hung ? 1 : 0,
+      e.progress == null ? null : Math.round(e.progress * 100),
       (e.windows || []).map((w) => [w.h, w.m ? 1 : 0, w.f ? 1 : 0, w.t]),
     ]),
     (s.recent || []).map((r) => [r.id, r.icon ? 1 : 0]),

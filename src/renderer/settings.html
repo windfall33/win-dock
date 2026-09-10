@@ -66,7 +66,7 @@
     <div class="row">
       <div><div class="label">图标大小</div></div>
       <div style="display:flex;align-items:center;gap:10px;">
-        <input id="size" type="range" min="36" max="72" step="2">
+        <input id="size" type="range" min="24" max="128" step="2">
         <span class="val" id="sizeVal"></span>
       </div>
     </div>
@@ -87,9 +87,16 @@
     <div class="row">
       <div>
         <div class="label">Dock 常驻（恒浮）</div>
-        <div class="hint">开启后前台有应用窗口也不自动收起（macOS 恒浮行为）；关闭则智能收起，把屏幕让给应用</div>
+        <div class="hint">开启后前台有应用窗口也不自动收起（macOS 默认恒浮）；关闭则智能收起，把屏幕让给应用</div>
       </div>
       <div class="toggle" id="keepVisible"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">每屏一条 Dock</div>
+        <div class="hint">每块显示器各放一条（macOS「Displays have separate Spaces」）；关闭则跟随鼠标单条</div>
+      </div>
+      <div class="toggle" id="dockPerDisplay"></div>
     </div>
     <div class="row">
       <div>
@@ -97,6 +104,13 @@
         <div class="hint">运行中的应用图标下方显示小圆点（macOS 设置项）</div>
       </div>
       <div class="toggle" id="showIndicators"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">最近应用区</div>
+        <div class="hint">分隔线右侧显示最近打开的应用（macOS「Show suggested and recent apps」）</div>
+      </div>
+      <div class="toggle" id="showRecents"></div>
     </div>
     <div class="row">
       <div>

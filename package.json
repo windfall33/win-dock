@@ -16,6 +16,9 @@
     "electron": "^33.0.0",
     "electron-builder": "^26.15.3"
   },
+  "allowScripts": {
+    "electron@33.4.11": true
+  },
   "build": {
     "appId": "com.windock.desktop",
     "productName": "Win Dock",
@@ -52,5 +55,8 @@
       "perMachine": false,
       "deleteAppDataOnUninstall": false
     }
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
   }
 }

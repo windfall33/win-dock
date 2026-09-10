@@ -1,13 +1,13 @@
 /* ================= macOS Dock for Windows — visual layer ================= */
 
 :root {
-  --glass-bg-1: rgba(255, 255, 255, 0.42);
-  --glass-bg-2: rgba(255, 255, 255, 0.22);
-  --glass-border: rgba(255, 255, 255, 0.42);
+  --glass-bg-1: rgba(255, 255, 255, 0.46);
+  --glass-bg-2: rgba(255, 255, 255, 0.24);
+  --glass-border: rgba(255, 255, 255, 0.48);
   /* 玻璃层次：外投影 + 顶部锐高光 + 底部反光 + 底缘收暗（厚度感） */
   --glass-shadow: 0 18px 48px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0.5px -0.5px rgba(255, 255, 255, 0.72),
-    inset 0 -1.5px 1px -0.5px rgba(255, 255, 255, 0.14),
+    inset 0 1px 0.5px -0.5px rgba(255, 255, 255, 0.78),
+    inset 0 -1.5px 1px -0.5px rgba(255, 255, 255, 0.16),
     inset 0 -12px 16px -14px rgba(0, 0, 0, 0.28);
   --dot-color: rgba(20, 20, 20, 0.82);
   --tooltip-bg: rgba(46, 46, 48, 0.78);
@@ -65,7 +65,7 @@ html, body {
 #dock-items {
   display: flex;
   align-items: flex-end;
-  padding: 6px 12px 9px 12px; /* top right bottom left */
+  padding: var(--bar-pad-y, 6px) var(--bar-pad-x, 12px) calc(var(--bar-pad-y, 6px) + 3px) var(--bar-pad-x, 12px);
 }
 
 .slot {
@@ -165,12 +165,33 @@ html[data-pos="bottom"] .slot canvas.app-icon {
 }
 .slot .badge.on { display: block; }
 
+/* 下载/传输进度环：包住图标，conic-gradient 扫过 */
+.slot .progress-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 24%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s ease;
+  background: conic-gradient(
+    rgba(80, 180, 255, 0.92) 0deg,
+    rgba(80, 180, 255, 0.92) var(--deg, 0deg),
+    rgba(255, 255, 255, 0.18) var(--deg, 0deg),
+    rgba(255, 255, 255, 0.18) 360deg
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  z-index: 2;
+}
+.slot .progress-ring.on { opacity: 1; }
+
 .slot .running-dot {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   bottom: -4px;
-  width: 5.5px; height: 5.5px;
+  width: max(5.5px, calc(var(--is, 52px) * 0.11));
+  height: max(5.5px, calc(var(--is, 52px) * 0.11));
   border-radius: 50%;
   background: var(--dot-color);
   /* 白描边 + 更实的投影：深色玻璃上肉眼可辨（实拍 4px 无描边几乎不可见） */

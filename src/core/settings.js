@@ -14,14 +14,18 @@ const DEFAULTS = {
   showTopbar: true,      // 顶部菜单栏（关闭可省一个渲染进程约 50MB）
   multidisplay: false,   // 多显示器：跟随鼠标所在屏幕
   occludeAway: true,     // 被窗口覆盖时自动让位（智能隐藏：最大化/铺满也收起；桌面与底边悬停常驻显示）
-  keepVisible: false,    // Dock 常驻（macOS 恒浮）：前台有应用窗口时也不自动收起，仅 autohide/全屏让位生效
+  keepVisible: true,     // Dock 常驻（macOS 恒浮默认）：前台有应用窗口时也不自动收起；关闭则智能收起
   workareaReserve: false, // 工作区预留（SPI_SETWORKAREA 扣除 Dock 条，最大化窗口不压 Dock；仅主显示器）
+  dockPerDisplay: false, // 每屏一条 Dock（macOS Displays have separate Spaces 行为）；false=跟随鼠标单条
   minimizeEffect: 'genie', // 最小化效果：genie | scale（macOS 两种效果）
   minimizeIntoIcon: false, // 最小化窗口收进对应应用图标（mac 的 Minimize window into app icon）
   showIndicators: true,  // 运行指示点（macOS「Show indicators for open applications」，默认开）
+  showRecents: true,     // 最近应用区（macOS「Show suggested and recent apps in Dock」，默认开）
   showDelayMs: 150,      // 贴边唤回延迟 ms（对齐 macOS autohide-delay 语义；GUI 不暴露，config.json 可调）
   hideDelayMs: 360,      // 指针离开后的收起延迟 ms（macOS 节奏位 autohide-time-modifier 的对应物，同上不进 GUI）
   recentApps: [],        // 最近打开应用 LRU
+  pollFastMs: 450,       // 状态有变后的快速轮询间隔（应用启动/关闭/切窗）
+  pollIdleMs: 1600,      // 稳定空闲时的慢轮询间隔（省桥接往返）
 };
 
 const APP_KEYS = {
@@ -99,8 +103,24 @@ class Settings {
       this.data.occludeAway = true;
       this.data.settingsVersion = 1;
     }
+    // v2 迁移：图标尺寸从 36–72 扩到 24–128（对齐 macOS 16–128）。
+    // 旧值若超出新下限仍保留；仅把历史默认 52 保持不变（已是合法值）。
+    if (this.data.settingsVersion < 2) {
+      this.data.settingsVersion = 2;
+    }
+    // v3 迁移：默认改为 Dock 常驻（对齐 macOS 恒浮）。
+    // 仅在用户从未写过 keepVisible 时覆盖 —— 已手动选过智能收起的用户保留选择。
+    if (this.data.settingsVersion < 3) {
+      if (this.data.keepVisible === undefined) this.data.keepVisible = true;
+      this.data.settingsVersion = 3;
+    }
     for (const [k, v] of Object.entries(DEFAULTS)) {
       if (this.data[k] === undefined) this.data[k] = v;
+    }
+    // 图标尺寸合法范围 24–128（macOS 16–128；Windows 小于 24 几乎不可点）
+    const isz = Number(this.data.iconSize);
+    if (!Number.isFinite(isz) || isz < 24 || isz > 128) {
+      this.data.iconSize = 52;
     }
     this.save();
   }

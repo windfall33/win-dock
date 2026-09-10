@@ -8,7 +8,7 @@ const { createPinRoutes } = require('./ipc-pin-routes.js');
 const { createPinApp } = require('./core/pin-app.js');
 
 // set-setting 白名单：允许渲染层通过 IPC 写入的设置项
-const SETTING_KEYS = ['iconSize', 'magnification', 'autohide', 'position', 'launchAtLogin', 'appearance', 'hideTaskbar', 'showTopbar', 'multidisplay', 'occludeAway', 'minimizeEffect', 'minimizeIntoIcon', 'workareaReserve', 'keepVisible', 'showIndicators'];
+const SETTING_KEYS = ['iconSize', 'magnification', 'autohide', 'position', 'launchAtLogin', 'appearance', 'hideTaskbar', 'showTopbar', 'multidisplay', 'occludeAway', 'minimizeEffect', 'minimizeIntoIcon', 'workareaReserve', 'keepVisible', 'showIndicators', 'showRecents', 'dockPerDisplay'];
 
 function createIpcRoutes(ctx) {
   const { log } = ctx;
@@ -35,7 +35,7 @@ function createIpcRoutes(ctx) {
     if (k === 'showTopbar') {
       if (v) ctx.createTopbar(); else ctx.closeTopbar();
     }
-    if (k === 'multidisplay') {
+    if (k === 'multidisplay' || k === 'dockPerDisplay') {
       ctx.applyBounds();
       ctx.createTopbar();
     }
@@ -367,6 +367,8 @@ function createIpcRoutes(ctx) {
         minimizeIntoIcon: !!ctx.settings.get('minimizeIntoIcon'),
         keepVisible: !!ctx.settings.get('keepVisible'),
         showIndicators: ctx.settings.get('showIndicators') !== false,
+        showRecents: ctx.settings.get('showRecents') !== false,
+        dockPerDisplay: !!ctx.settings.get('dockPerDisplay'),
       });
     }
     if (ctx.settingsWin && !ctx.settingsWin.isDestroyed()) {
@@ -385,6 +387,8 @@ function createIpcRoutes(ctx) {
         minimizeIntoIcon: !!ctx.settings.get('minimizeIntoIcon'),
         keepVisible: !!ctx.settings.get('keepVisible'),
         showIndicators: ctx.settings.get('showIndicators') !== false,
+        showRecents: ctx.settings.get('showRecents') !== false,
+        dockPerDisplay: !!ctx.settings.get('dockPerDisplay'),
       });
     }
   }

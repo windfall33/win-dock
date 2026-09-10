@@ -63,12 +63,27 @@ test('v1 migration: occludeAway defaults true on legacy stores without settingsV
   fs.writeFileSync(CONFIG, JSON.stringify({ iconSize: 44, pins: [] }), 'utf8');
   const s = new Settings();
   assert.equal(s.get('occludeAway'), true, 'v1 迁移开启智能让位');
-  assert.equal(s.get('settingsVersion'), 1);
+  assert.equal(s.get('settingsVersion'), 3, '加载后升到当前版本');
   assert.equal(s.get('iconSize'), 44, '用户自定义值保留');
+  assert.equal(s.get('keepVisible'), true, 'v3 迁移：未显式设置过则默认常驻');
   // 已迁移的配置不再重复迁移（保留用户关闭的选择）
   s.set('occludeAway', false);
+  s.set('keepVisible', false);
   const s2 = new Settings();
   assert.equal(s2.get('occludeAway'), false, 'settingsVersion 存在即不重跑迁移');
+  assert.equal(s2.get('keepVisible'), false, '用户关闭常驻的选择被保留');
+});
+
+test('iconSize out of 24–128 is clamped back to default 52', () => {
+  fs.writeFileSync(CONFIG, JSON.stringify({ iconSize: 10, pins: [] }), 'utf8');
+  const s = new Settings();
+  assert.equal(s.get('iconSize'), 52, '过小尺寸回退默认');
+  fs.writeFileSync(CONFIG, JSON.stringify({ iconSize: 999, pins: [] }), 'utf8');
+  const s2 = new Settings();
+  assert.equal(s2.get('iconSize'), 52, '过大尺寸回退默认');
+  fs.writeFileSync(CONFIG, JSON.stringify({ iconSize: 128, pins: [] }), 'utf8');
+  const s3 = new Settings();
+  assert.equal(s3.get('iconSize'), 128, '合法上界保留');
 });
 
 test('non-array pins are replaced by defaults (compat)', () => {

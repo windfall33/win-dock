@@ -1,4 +1,4 @@
-﻿# win-dock native bridge
+# win-dock native bridge
 # Persistent helper process. Speaks NDJSON over stdin/stdout.
 # Request : {"id":"n","cmd":"...","args":{...}}
 # Response: {"id":"n","ok":true/false,"data":{...}}
@@ -545,7 +545,9 @@ public class NativeOps {
         }
         IntPtr[] bestIcons = null;
         int count = 0;
-        int[] sizes = new int[] { 256, 128, 96, 48 };
+        // 512 优先：大倍率鱼眼（iconSize 128 × 1.8 ≈ 230）时 256 仍会发虚；
+        // 资源里没有 512 时 PrivateExtractIcons 会自行落到下一档，不会失败。
+        int[] sizes = new int[] { 512, 256, 128, 96, 48 };
         foreach (int sz in sizes) {
             IntPtr[] icons = new IntPtr[1];
             IntPtr[] ids = new IntPtr[1];
@@ -556,7 +558,7 @@ public class NativeOps {
         }
         // 回退 ①：shell item 图标工厂（UWP/别名的 256px 正规通道；位图已按请求尺寸合成）
         if (bestIcons == null) {
-            System.Drawing.Bitmap fb = ShellItemIconBitmap(path, 256);
+            System.Drawing.Bitmap fb = ShellItemIconBitmap(path, 512);
             if (fb != null) {
                 using (var ms = new System.IO.MemoryStream()) {
                     fb.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
@@ -599,6 +601,63 @@ public class NativeOps {
                 }
             }
         }
+    }
+
+    // ---- WinEvent：窗口创建/销毁/前台变化，事件驱动主进程尽快刷新 ----
+    public static readonly object OutLock = new object();
+    public delegate void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
+        int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+    [DllImport("user32.dll")]
+    public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc,
+        WinEventProc lpfnWinEventProc, uint idProcess, uint idThread, uint flags);
+    [DllImport("user32.dll")] public static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+    [DllImport("user32.dll")] public static extern int GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
+    [DllImport("user32.dll")] public static extern bool TranslateMessage(ref MSG lpMsg);
+    [DllImport("user32.dll")] public static extern IntPtr DispatchMessage(ref MSG lpMsg);
+    public struct MSG {
+        public IntPtr hwnd; public uint message; public IntPtr wParam; public IntPtr lParam;
+        public uint time; public int pt_x; public int pt_y;
+    }
+    const uint WINEVENT_OUTOFCONTEXT = 0x0000;
+    const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
+    const uint EVENT_OBJECT_CREATE = 0x8000;
+    const uint EVENT_OBJECT_DESTROY = 0x8001;
+    const uint EVENT_OBJECT_SHOW = 0x8002;
+    const uint EVENT_OBJECT_HIDE = 0x8003;
+    static WinEventProc _winEventProc; // 防 GC
+    static bool _winEventsStarted;
+
+    public static void StartWinEvents() {
+        if (_winEventsStarted) return;
+        _winEventsStarted = true;
+        _winEventProc = (hook, eventType, hwnd, idObject, idChild, thread, time) => {
+            // 仅顶层窗口（OBJID_WINDOW=0）
+            if (idObject != 0 || hwnd == IntPtr.Zero) return;
+            int kind = 0;
+            if (eventType == EVENT_SYSTEM_FOREGROUND) kind = 1;
+            else if (eventType == EVENT_OBJECT_CREATE) kind = 2;
+            else if (eventType == EVENT_OBJECT_DESTROY) kind = 3;
+            else if (eventType == EVENT_OBJECT_SHOW) kind = 4;
+            else if (eventType == EVENT_OBJECT_HIDE) kind = 5;
+            else return;
+            string line = "{\"type\":\"win-event\",\"event\":" + kind + ",\"h\":\"" + hwnd.ToInt64() + "\"}";
+            lock (OutLock) {
+                try { Console.WriteLine(line); } catch {}
+            }
+        };
+        var t = new System.Threading.Thread(() => {
+            SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND,
+                IntPtr.Zero, _winEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
+            SetWinEventHook(EVENT_OBJECT_CREATE, EVENT_OBJECT_HIDE,
+                IntPtr.Zero, _winEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
+            MSG msg;
+            while (GetMessage(out msg, IntPtr.Zero, 0, 0) != 0) {
+                TranslateMessage(ref msg);
+                DispatchMessage(ref msg);
+            }
+        });
+        t.IsBackground = true;
+        t.Start();
     }
 }
 "@ -ReferencedAssemblies System.Drawing | Out-Null

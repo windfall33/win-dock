@@ -13,3 +13,13 @@ release-pack/
 .docky-research/
 tools/_seg_*.txt
 tools/_renderer_rewritten.txt
+.smoke-userdata/
+shots/
+smoke*.txt
+smoke*.log
+smoke-run.log
+electron.err.log
+electron.out.log
+.smoke-pid
+icon-cache.log
+

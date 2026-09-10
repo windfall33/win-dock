@@ -169,6 +169,20 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
+  // 主进程崩溃自拉起：未捕获异常 / 未处理拒绝 记日志后 relaunch。
+  // 不能只 console —— Dock 是常驻组件，主进程挂了桌面入口就没了。
+  let fatal = false;
+  function crashRecover(kind, err) {
+    if (fatal) return;
+    fatal = true;
+    try { log(kind, (err && (err.stack || err.message)) || String(err)); } catch {}
+    try { if (ctx.bridge) ctx.bridge.dispose(); } catch {}
+    try { app.relaunch(); } catch {}
+    try { app.exit(1); } catch {}
+  }
+  process.on('uncaughtException', (e) => crashRecover('uncaughtException', e));
+  process.on('unhandledRejection', (e) => crashRecover('unhandledRejection', e));
+
   app.on('second-instance', () => {
     if (ctx.dockWin) ctx.dockWin.webContents.send('poke');
   });
@@ -192,6 +206,14 @@ if (!gotLock) {
     // 注意 constructor 会同步触发首次 onReady（此时本赋值尚未执行），
     // 所以启动路径需在赋值后显式补调一次。
     ctx.bridge.onReady = () => ctx.applyWorkarea();
+    // WinEvent（窗口创建/销毁/前台）→ 立即 poll，把应用启停延迟从 ~1.4s 压到 ~50ms
+    let winEventCoolUntil = 0;
+    ctx.bridge.onWinEvent = (ev) => {
+      const now = Date.now();
+      if (now < winEventCoolUntil) return;
+      winEventCoolUntil = now + 200; // 合并短时间风暴
+      try { ctx.pollOnce(); } catch {}
+    };
     ctx.applyWorkarea();
     // 'icons-v2'：图标提取管线升级 256px（shell item factory）后换目录，
     // 让旧 32px 缓存全部失效重建（老缓存文件不区分提取尺寸，无法逐个判新旧）
@@ -239,12 +261,24 @@ if (!gotLock) {
 
     let pollTimer = null;
     let occTimer = null;
-    pollTimer = setInterval(ctx.pollOnce, 1400);
+    // 自适应轮询：近 2.5s 内有状态变化 → 快档（应用启动/关闭尽快可见）；
+    // 稳定空闲 → 慢档（省桥接往返与 CPU）。焦点切换仍走 checkOcclusion 即时触发。
+    const pollFast = () => Number(ctx.settings.get('pollFastMs')) || 450;
+    const pollIdle = () => Number(ctx.settings.get('pollIdleMs')) || 1600;
+    function schedulePoll(delay) {
+      if (pollTimer) clearTimeout(pollTimer);
+      pollTimer = setTimeout(async () => {
+        try { await ctx.pollOnce(); } catch {}
+        const recent = ctx.lastStateChangeTs && (Date.now() - ctx.lastStateChangeTs) < 2500;
+        schedulePoll(recent ? pollFast() : pollIdle());
+      }, delay);
+    }
+    schedulePoll(pollIdle());
     occTimer = setInterval(ctx.checkOcclusion, 250);
-    setTimeout(ctx.pollOnce, 350); // 尽快出第一帧状态
+    setTimeout(() => { try { ctx.pollOnce(); } catch {} }, 350); // 尽快出第一帧状态
 
     app.on('before-quit', () => {
-      if (pollTimer) clearInterval(pollTimer);
+      if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
       if (occTimer) clearInterval(occTimer);
       if (ctx.genieIdleTimer) { clearTimeout(ctx.genieIdleTimer); ctx.genieIdleTimer = null; }
       for (const t of ctx.forceKillTimers) clearTimeout(t);

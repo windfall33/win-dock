@@ -14,6 +14,7 @@
 
 const path = require('node:path');
 const { extractBadgeCount } = require('./badges.js');
+const { extractProgress } = require('./progress.js');
 const { extractMinimized } = require('./minimized.js');
 const { visibleRecent } = require('./recent.js');
 
@@ -113,6 +114,7 @@ function createSnapshotBuilder(deps) {
         // P1-F6：任一窗口无响应 → 应用级 hung（仅影响菜单「强制退出」入口）
         hung: wins.some((w) => w.hung),
         badge: extractBadgeCount(wins.map((w) => w.t)),
+        progress: extractProgress(wins.map((w) => w.t)),
       });
     }
 
@@ -159,6 +161,7 @@ function createSnapshotBuilder(deps) {
     for (const g of shownExtras) {
       g.icon = g.exe ? iconsGetSync(g.exe) : null;
       g.badge = extractBadgeCount((g.windows || []).map((w) => w.t));
+      g.progress = extractProgress((g.windows || []).map((w) => w.t));
       // P1-F6：未固定应用同样聚合 hung（任一窗口无响应）
       g.hung = (g.windows || []).some((w) => w.hung);
     }
@@ -167,9 +170,11 @@ function createSnapshotBuilder(deps) {
     // 最小化窗口投影（仿 macOS 右侧分区）；appName/icon 沿用所属应用条目
     // mac「最小化到应用图标」：开启时最小化窗口不显示在右侧分区，而是收进所属应用图标
     const minimized = getSetting('minimizeIntoIcon') ? [] : extractMinimized(winList, entries);
-    // 最近打开：LRU（按使用时间），最多 3 个，标注是否正在运行
+    // 最近打开：LRU（按使用时间），最多 3 个，标注是否正在运行。
+    // macOS「Show suggested and recent apps」开关：关掉后整区不投影（分隔线自动收敛）。
+    const showRecents = s.showRecents !== false;
     const runningExes = entries.filter((e) => (e.windows || []).length > 0).map((e) => e.exe);
-    const recent = visibleRecent(s.recentApps || [], runningExes);
+    const recent = showRecents ? visibleRecent(s.recentApps || [], runningExes) : [];
     for (const r of recent) {
       r.icon = r.exe ? iconsGetSync(r.exe) : null;
     }
@@ -183,12 +188,14 @@ function createSnapshotBuilder(deps) {
         magnification: s.magnification,
         autohide: s.autohide,
         keepVisible: !!s.keepVisible,
+        dockPerDisplay: !!s.dockPerDisplay,
         appearance: s.appearance,
         hideTaskbar: !!s.hideTaskbar,
         position: s.position || 'bottom',
         minimizeEffect: s.minimizeEffect || 'genie',
         minimizeIntoIcon: !!s.minimizeIntoIcon,
         showIndicators: s.showIndicators !== false,
+        showRecents: s.showRecents !== false,
         showDelayMs: Number(s.showDelayMs) || 150,
         hideDelayMs: Number(s.hideDelayMs) || 360,
       },

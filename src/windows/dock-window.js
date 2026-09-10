@@ -1,35 +1,41 @@
 'use strict';
-// P3-F1a main.js 拆分：dock 主窗口（创建/几何/层级/穿透/多屏跟随/工作区预留）。
-// 纯平移：函数体自 main.js 逐行迁移，共享状态经 ctx 读写（与原全局变量一一对应）。
+// P3-F1a main.js 拆分：dock 主窗口（创建/几何/层级/穿透/多屏/工作区预留）。
+// v5：支持 dockPerDisplay —— 每块显示器一条 Dock（macOS separate Spaces 语义）。
+// 默认仍为「跟随鼠标」单条；ctx.dockWin 保持指向主/当前条，兼容既有 IPC。
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
 
 function createDockWindow(ctx) {
   const { log } = ctx;
-
-  function currentDisplay() {
-    if (ctx.settings && ctx.settings.get('multidisplay')) {
-      return screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-    }
-    return screen.getPrimaryDisplay();
-  }
+  /** @type {Map<number, Electron.BrowserWindow>} displayId -> dock window */
+  ctx.dockWins = ctx.dockWins || new Map();
 
   function dockPosition() {
     const p = ctx.settings ? String(ctx.settings.get('position') || 'bottom') : 'bottom';
     return (p === 'left' || p === 'right') ? p : 'bottom';
   }
 
-  function dockMetrics() {
+  function perDisplay() {
+    return !!(ctx.settings && ctx.settings.get('dockPerDisplay'));
+  }
+
+  function currentDisplay() {
+    if (perDisplay()) {
+      return screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+    }
+    if (ctx.settings && ctx.settings.get('multidisplay')) {
+      return screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+    }
+    return screen.getPrimaryDisplay();
+  }
+
+  function dockMetricsFor(display) {
     const size = Number(ctx.settings.get('iconSize')) || 52;
     const mag = Math.min(2.2, Math.max(1, Number(ctx.settings.get('magnification')) || 1.8));
     const pos = dockPosition();
-    // 条带厚度 = 容纳放大图标 + 指示点 + 内边距 + 留白（悬停预览面板在 DOM 内弹出，
-    // 不能超出窗口边界，故窗口整体加厚；留白区透明且始终点击穿透）
     const strip = Math.ceil(size * mag + 44) + 240;
-    const d = currentDisplay();
+    const d = display || currentDisplay();
     if (pos === 'left' || pos === 'right') {
-      // 侧栏：窗口延伸到屏幕真实侧边，贴边唤醒手势与 macOS 一致；
-      // 侧边内嵌宽度（任务栏在侧边等场景）让开，条本体仍停在 workArea 边缘。
       const edgeInset = pos === 'left'
         ? Math.max(0, d.workArea.x - d.bounds.x)
         : Math.max(0, (d.bounds.x + d.bounds.width) - (d.workArea.x + d.workArea.width));
@@ -38,44 +44,38 @@ function createDockWindow(ctx) {
         height: d.workArea.height,
         x: pos === 'left' ? d.bounds.x : d.bounds.x + d.bounds.width - (strip + edgeInset),
         y: d.workArea.y,
-        size, mag, wa: d.workArea, pos, edgeInset,
+        size, mag, wa: d.workArea, pos, edgeInset, displayId: d.id,
       };
     }
-    // 底部内嵌高度（Windows 任务栏等 workArea 之外的底部区域）：
-    // Dock 窗口延伸到屏幕真实底边，贴底唤醒手势与 macOS 一致；
-    // 透明+穿透，不影响任务栏交互，条本体仍停在 workArea 底边之上。
     const bottomInset = Math.max(0, (d.bounds.y + d.bounds.height) - (d.workArea.y + d.workArea.height));
     return {
       width: d.workArea.width,
       height: strip + bottomInset,
       x: d.workArea.x,
       y: d.bounds.y + d.bounds.height - (strip + bottomInset),
-      size, mag, wa: d.workArea, pos, edgeInset: bottomInset,
+      size, mag, wa: d.workArea, pos, edgeInset: bottomInset, displayId: d.id,
     };
   }
 
-  // ---- 工作区预留（SPI_SETWORKAREA）----
-  // 开启后把 Dock 条占据的边缘从主显示器桌面工作区中扣除，
-  // 最大化窗口会自动避开 Dock（macOS 原版行为）。仅主显示器生效。
-  // 原始工作区直接取 Electron screen.workArea（已扣任务栏、未扣 Dock），
-  // 不依赖桥接回读，天然规避「桥接崩溃期间残留预留导致二次收缩」的风险。
-  let workareaApplied = false; // 当前是否处于预留状态
-  let workareaBusy = false;    // 防重入（request 在途时忽略新调用）
+  function dockMetrics() {
+    return dockMetricsFor(currentDisplay());
+  }
+
+  let workareaApplied = false;
+  let workareaBusy = false;
   function applyWorkarea(mode) {
     if (!ctx.bridge || workareaBusy) return;
-    // mode='restore'：无条件恢复（退出时用）；否则按设置决定
     let want = mode === 'restore' ? false : !!ctx.settings.get('workareaReserve');
     const primary = screen.getPrimaryDisplay();
-    if (want && ctx.curDisplayId && ctx.curDisplayId !== primary.id) {
-      want = false; // Dock 不在主屏：SPI 工作区只管主显示器，退化为不预留
+    if (want && ctx.curDisplayId && ctx.curDisplayId !== primary.id && !perDisplay()) {
+      want = false;
     }
     const wa = primary.workArea;
     const orig = { l: wa.x, t: wa.y, r: wa.x + wa.width, b: wa.y + wa.height };
-    if (!want && !workareaApplied) return; // 既不要求预留也没有已生效的预留
+    if (!want && !workareaApplied) return;
     const args = { reserve: want, orig };
     if (want) {
       const pos = ctx.settings.get('position');
-      // 预留量：优先用渲染层上报的条矩形主轴尺寸，缺失时按 iconSize 估算
       const barMain = ctx.barRectDip
         ? (pos === 'left' || pos === 'right' ? ctx.barRectDip.w : ctx.barRectDip.h)
         : (ctx.settings.get('iconSize') + 30);
@@ -92,27 +92,8 @@ function createDockWindow(ctx) {
     }).finally(() => { workareaBusy = false; });
   }
 
-  function applyBounds() {
-    const dockWin = ctx.dockWin;
-    if (!dockWin) return;
-    const m = dockMetrics();
-    // 防御：dock 窗口不得越出显示器边界（某些分辨率/DPI/位置下 strip 或 inset 可能让坐标越界）
-    const b = currentDisplay().bounds;
-    const w = Math.min(m.width, b.width);
-    const h = Math.min(m.height, b.height);
-    const x = Math.min(Math.max(m.x, b.x), b.x + b.width - w);
-    const y = Math.min(Math.max(m.y, b.y), b.y + b.height - h);
-    dockWin.setBounds({ x, y, width: w, height: h });
-    ctx.dockBoundsDip = dockWin.getBounds();
-    ctx.curDisplayId = currentDisplay().id;
-    log('dock-bounds', JSON.stringify({
-      x, y, w, h, pos: m.pos, want: { x: m.x, y: m.y, w: m.width, h: m.height },
-      screen: { x: b.x, y: b.y, w: b.width, h: b.height },
-    }));
-  }
-
-  function createDock() {
-    const m = dockMetrics();
+  function makeDockWindow(display) {
+    const m = dockMetricsFor(display);
     const dockWin = new BrowserWindow({
       x: m.x, y: m.y, width: m.width, height: m.height,
       frame: false,
@@ -135,51 +116,136 @@ function createDockWindow(ctx) {
         backgroundThrottling: false,
       },
     });
-    ctx.dockWin = dockWin;
-    ctx.dockHwnd = dockWin.getNativeWindowHandle();
-    // screen-saver 级：盖过普通置顶应用（topmost 会被 maximized 前台应用反超）
     dockWin.setAlwaysOnTop(true, 'screen-saver');
     dockWin.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
     dockWin.once('ready-to-show', () => {
       dockWin.showInactive();
-      // 初始：整体穿透，由渲染层在悬停到 Dock 上时再解除
-      setClickThrough(true);
+      try { dockWin.setIgnoreMouseEvents(true, { forward: true }); } catch {}
+      // 多屏新建的条需要立刻拿到一帧状态，否则要等下一轮 poll
+      try { if (ctx.pollOnce) ctx.pollOnce(); } catch {}
     });
-    dockWin.on('closed', () => { ctx.dockWin = null; });
-
-    // 阻止系统右键/菜单干扰
     dockWin.webContents.on('context-menu', (e) => e.preventDefault());
+    dockWin.__displayId = display.id;
+    return dockWin;
   }
 
-  // 点击穿透控制：true = 整窗穿透（鼠标事件仍转发给渲染层用于热区判断）
-  let clickThroughOn = true;
-  function setClickThrough(on) {
-    const dockWin = ctx.dockWin;
+  function applyBoundsFor(display) {
+    const dockWin = ctx.dockWins.get(display.id);
     if (!dockWin || dockWin.isDestroyed()) return;
-    if (on === clickThroughOn && arguments.length === 1 && dockWin.__ctInitialized) return;
-    dockWin.__ctInitialized = true;
-    clickThroughOn = on;
-    try {
-      dockWin.setIgnoreMouseEvents(on, { forward: true });
-    } catch (e) { log('setIgnoreMouseEvents failed', e.message); }
+    const m = dockMetricsFor(display);
+    const b = display.bounds;
+    const w = Math.min(m.width, b.width);
+    const h = Math.min(m.height, b.height);
+    const x = Math.min(Math.max(m.x, b.x), b.x + b.width - w);
+    const y = Math.min(Math.max(m.y, b.y), b.y + b.height - h);
+    dockWin.setBounds({ x, y, width: w, height: h });
+    if (!ctx.dockWin || ctx.dockWin.isDestroyed() || ctx.dockWin === dockWin) {
+      ctx.dockBoundsDip = dockWin.getBounds();
+      ctx.dockHwnd = dockWin.getNativeWindowHandle();
+      ctx.curDisplayId = display.id;
+    }
+    log('dock-bounds', JSON.stringify({
+      display: display.id, x, y, w, h, pos: m.pos,
+    }));
   }
 
-  // 底边唤醒不再使用独立探针窗口：Dock 窗口本身贴屏幕底边，点击穿透模式下
-  // 鼠标移动事件经 forward 转发进渲染层，由渲染层检测底边悬停后 request-show。
-  // 省掉一个常驻渲染进程（约 65MB）。
+  function applyBounds() {
+    if (!ctx.dockWins.size) return;
+    if (perDisplay()) {
+      for (const d of screen.getAllDisplays()) {
+        if (!ctx.dockWins.has(d.id)) {
+          const win = makeDockWindow(d);
+          ctx.dockWins.set(d.id, win);
+        }
+        applyBoundsFor(d);
+      }
+      // 销毁多余显示器上的条
+      const live = new Set(screen.getAllDisplays().map((d) => d.id));
+      for (const [id, win] of ctx.dockWins) {
+        if (!live.has(id)) {
+          try { if (!win.isDestroyed()) win.destroy(); } catch {}
+          ctx.dockWins.delete(id);
+        }
+      }
+    } else {
+      // 单条：只保留一条，贴当前显示器
+      const d = currentDisplay();
+      const keep = ctx.dockWins.get(d.id) || ctx.dockWin;
+      for (const [id, win] of [...ctx.dockWins]) {
+        if (id !== d.id && win && !win.isDestroyed()) {
+          try { win.destroy(); } catch {}
+        }
+        if (id !== d.id) ctx.dockWins.delete(id);
+      }
+      if (!keep || keep.isDestroyed()) {
+        keep = makeDockWindow(d);
+        ctx.dockWins.set(d.id, keep);
+      } else {
+        ctx.dockWins.set(d.id, keep);
+      }
+      ctx.dockWin = keep;
+      ctx.dockHwnd = keep.getNativeWindowHandle();
+      applyBoundsFor(d);
+      ctx.dockBoundsDip = keep.getBounds();
+      ctx.curDisplayId = d.id;
+    }
+    // 主引用：多屏时指向光标所在屏那条（供 occlusion 等单窗逻辑）
+    const cur = currentDisplay();
+    const ref = ctx.dockWins.get(cur.id);
+    if (ref && !ref.isDestroyed()) {
+      ctx.dockWin = ref;
+      ctx.dockHwnd = ref.getNativeWindowHandle();
+      ctx.dockBoundsDip = ref.getBounds();
+      ctx.curDisplayId = cur.id;
+    }
+  }
 
-  // 周期重申 z-order：topmost 带内后来者会反超（如常驻置顶应用、任务栏滑出），
-  // 拖拽类应用反复插顶，Dock/探针需要定期回到 screen-saver 级。
+  function createDock() {
+    ctx.dockWins = new Map();
+    if (perDisplay()) {
+      for (const d of screen.getAllDisplays()) {
+        ctx.dockWins.set(d.id, makeDockWindow(d));
+      }
+    } else {
+      const d = currentDisplay();
+      ctx.dockWins.set(d.id, makeDockWindow(d));
+    }
+    const first = ctx.dockWins.values().next().value;
+    ctx.dockWin = first;
+    if (first) {
+      ctx.dockHwnd = first.getNativeWindowHandle();
+      ctx.curDisplayId = first.__displayId;
+    }
+    applyBounds();
+  }
+
+  function forEachDockWin(fn) {
+    for (const win of ctx.dockWins.values()) {
+      if (win && !win.isDestroyed()) fn(win);
+    }
+  }
+
+  // 点击穿透：可指定窗口（多屏时只应有一条处于交互态），默认作用于全部
+  function setClickThrough(on, targetWin) {
+    const apply = (win) => {
+      if (!win || win.isDestroyed()) return;
+      try { win.setIgnoreMouseEvents(!!on, { forward: true }); } catch {}
+    };
+    if (targetWin) apply(targetWin);
+    else forEachDockWin(apply);
+  }
+
   function assertWindowLevels() {
     try {
-      const { dockWin, topbarWin, launchpadWin } = ctx;
-      if (dockWin && !dockWin.isDestroyed()) dockWin.setAlwaysOnTop(true, 'screen-saver');
+      forEachDockWin((w) => w.setAlwaysOnTop(true, 'screen-saver'));
+      const { topbarWin, launchpadWin } = ctx;
       if (topbarWin && !topbarWin.isDestroyed()) topbarWin.setAlwaysOnTop(true, 'screen-saver');
       if (launchpadWin && !launchpadWin.isDestroyed()) launchpadWin.setAlwaysOnTop(true, 'screen-saver');
     } catch {}
   }
 
   function maybeFollowCursorDisplay() {
+    if (perDisplay()) return;
     if (!ctx.settings || !ctx.settings.get('multidisplay')) return;
     const disp = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
     if (disp.id !== ctx.curDisplayId) {
@@ -190,9 +256,9 @@ function createDockWindow(ctx) {
   }
 
   return {
-    currentDisplay, dockPosition, dockMetrics,
+    currentDisplay, dockPosition, dockMetrics, dockMetricsFor,
     applyWorkarea, applyBounds, createDock, setClickThrough,
-    assertWindowLevels, maybeFollowCursorDisplay,
+    assertWindowLevels, maybeFollowCursorDisplay, forEachDockWin,
   };
 }
 
