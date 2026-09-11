@@ -167,6 +167,14 @@ function createSnapshotBuilder(deps) {
     }
 
     const entries = [...statePins, ...shownExtras];
+    // macOS static-only：隐藏全部固定项，Dock 变纯运行区（只显示有窗口/托盘在跑的）
+    let visibleEntries = entries;
+    if (s.staticOnly) {
+      visibleEntries = entries.filter((e) => {
+        if (e.kind === 'folder') return false;
+        return !!(e.windows && e.windows.length) || !!e.running;
+      });
+    }
     // 最小化窗口投影（仿 macOS 右侧分区）；appName/icon 沿用所属应用条目
     // mac「最小化到应用图标」：开启时最小化窗口不显示在右侧分区，而是收进所属应用图标
     const minimized = getSetting('minimizeIntoIcon') ? [] : extractMinimized(winList, entries);
@@ -179,7 +187,7 @@ function createSnapshotBuilder(deps) {
       r.icon = r.exe ? iconsGetSync(r.exe) : null;
     }
     return {
-      entries,
+      entries: visibleEntries,
       recent,
       minimized,
       trash: { count: getTrashCount() },
@@ -196,6 +204,9 @@ function createSnapshotBuilder(deps) {
         minimizeIntoIcon: !!s.minimizeIntoIcon,
         showIndicators: s.showIndicators !== false,
         showRecents: s.showRecents !== false,
+        staticOnly: !!s.staticOnly,
+        scrollToOpen: !!s.scrollToOpen,
+        springLoadApps: !!s.springLoadApps,
         showDelayMs: Number(s.showDelayMs) || 150,
         hideDelayMs: Number(s.hideDelayMs) || 360,
       },

@@ -8,7 +8,7 @@ const { createPinRoutes } = require('./ipc-pin-routes.js');
 const { createPinApp } = require('./core/pin-app.js');
 
 // set-setting 白名单：允许渲染层通过 IPC 写入的设置项
-const SETTING_KEYS = ['iconSize', 'magnification', 'autohide', 'position', 'launchAtLogin', 'appearance', 'hideTaskbar', 'showTopbar', 'multidisplay', 'occludeAway', 'minimizeEffect', 'minimizeIntoIcon', 'workareaReserve', 'keepVisible', 'showIndicators', 'showRecents', 'dockPerDisplay'];
+const SETTING_KEYS = ['iconSize', 'magnification', 'autohide', 'position', 'launchAtLogin', 'appearance', 'hideTaskbar', 'showTopbar', 'multidisplay', 'occludeAway', 'minimizeEffect', 'minimizeIntoIcon', 'workareaReserve', 'keepVisible', 'showIndicators', 'showRecents', 'dockPerDisplay', 'staticOnly', 'scrollToOpen', 'springLoadApps', 'showDelayMs', 'hideDelayMs'];
 
 function createIpcRoutes(ctx) {
   const { log } = ctx;
@@ -183,6 +183,57 @@ function createIpcRoutes(ctx) {
 
       case 'show-all':
         return appActions.showAll();
+
+      case 'mission-control':
+        // Windows 任务视图（Win+Tab）：对齐 macOS Mission Control 全局窗口总览
+        await ctx.bridge.request('mission-control', {}, 4000).catch(() => {});
+        return { ok: true };
+
+      case 'list-displays': {
+        const { screen } = require('electron');
+        const list = screen.getAllDisplays().map((d, i) => ({
+          id: d.id,
+          index: i + 1,
+          label: d.label || `显示器 ${i + 1}`,
+          bounds: d.bounds,
+          workArea: d.workArea,
+          primary: d.id === screen.getPrimaryDisplay().id,
+        }));
+        return { ok: true, displays: list };
+      }
+
+      case 'move-window-to': {
+        // 把窗口移到指定显示器 workArea 中央（macOS「分配到桌面」的 Windows 近似）
+        const { screen } = require('electron');
+        const disp = screen.getAllDisplays().find((d) => d.id === Number(p.displayId));
+        if (!disp) return { ok: false, err: 'display-not-found' };
+        const wa = disp.workArea;
+        const w = Math.min(p.w || Math.round(wa.width * 0.7), wa.width);
+        const h = Math.min(p.h || Math.round(wa.height * 0.7), wa.height);
+        const x = wa.x + Math.round((wa.width - w) / 2);
+        const y = wa.y + Math.round((wa.height - h) / 2);
+        await ctx.bridge.request('move-window-to', { h: String(p.hWnd), x, y, w, h }, 5000)
+          .catch(() => {});
+        return { ok: true };
+      }
+
+      case 'move-app-to-display': {
+        const { screen } = require('electron');
+        const disp = screen.getAllDisplays().find((d) => d.id === Number(p.displayId));
+        if (!disp) return { ok: false, err: 'display-not-found' };
+        const wa = disp.workArea;
+        for (const hWnd of p.hs || []) {
+          try {
+            const rect = await ctx.bridge.request('window-rect', { h: String(hWnd) }, 3000).catch(() => null);
+            const w = rect && rect.w ? Math.min(rect.w, wa.width) : Math.round(wa.width * 0.7);
+            const h = rect && rect.h ? Math.min(rect.h, wa.height) : Math.round(wa.height * 0.7);
+            const x = wa.x + Math.round((wa.width - w) / 2);
+            const y = wa.y + Math.round((wa.height - h) / 2);
+            await ctx.bridge.request('move-window-to', { h: String(hWnd), x, y, w, h }, 5000);
+          } catch {}
+        }
+        return { ok: true };
+      }
 
 
       case 'focus-restore': {
@@ -375,6 +426,11 @@ function createIpcRoutes(ctx) {
       keepVisible: !!ctx.settings.get('keepVisible'),
       showIndicators: ctx.settings.get('showIndicators') !== false,
       showRecents: ctx.settings.get('showRecents') !== false,
+      staticOnly: !!ctx.settings.get('staticOnly'),
+      scrollToOpen: !!ctx.settings.get('scrollToOpen'),
+      springLoadApps: !!ctx.settings.get('springLoadApps'),
+      showDelayMs: Number(ctx.settings.get('showDelayMs')) || 150,
+      hideDelayMs: Number(ctx.settings.get('hideDelayMs')) || 360,
       dockPerDisplay: !!ctx.settings.get('dockPerDisplay'),
     };
     if (ctx.forEachDockWin) {

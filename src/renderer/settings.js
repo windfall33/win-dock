@@ -18,6 +18,17 @@ function render(s) {
   $('#dockPerDisplay').classList.toggle('on', !!s.dockPerDisplay);
   $('#showIndicators').classList.toggle('on', s.showIndicators !== false);
   $('#showRecents').classList.toggle('on', s.showRecents !== false);
+  $('#staticOnly').classList.toggle('on', !!s.staticOnly);
+  $('#scrollToOpen').classList.toggle('on', !!s.scrollToOpen);
+  $('#springLoadApps').classList.toggle('on', !!s.springLoadApps);
+  if (s.showDelayMs !== undefined) {
+    $('#showDelay').value = s.showDelayMs;
+    $('#showDelayVal').textContent = Math.round(s.showDelayMs) + 'ms';
+  }
+  if (s.hideDelayMs !== undefined) {
+    $('#hideDelay').value = s.hideDelayMs;
+    $('#hideDelayVal').textContent = Math.round(s.hideDelayMs) + 'ms';
+  }
   $('#autologin').classList.toggle('on', !!s.launchAtLogin);
   $('#hideTaskbar').classList.toggle('on', !!s.hideTaskbar);
   $('#topbar').classList.toggle('on', s.showTopbar !== false);
@@ -81,6 +92,33 @@ $('#showRecents').addEventListener('click', () => {
   const next = !$('#showRecents').classList.contains('on');
   $('#showRecents').classList.toggle('on', next);
   window.dock.invoke('set-setting', { key: 'showRecents', value: next });
+});
+$('#staticOnly').addEventListener('click', () => {
+  const next = !$('#staticOnly').classList.contains('on');
+  $('#staticOnly').classList.toggle('on', next);
+  window.dock.invoke('set-setting', { key: 'staticOnly', value: next });
+});
+$('#scrollToOpen').addEventListener('click', () => {
+  const next = !$('#scrollToOpen').classList.contains('on');
+  $('#scrollToOpen').classList.toggle('on', next);
+  window.dock.invoke('set-setting', { key: 'scrollToOpen', value: next });
+});
+$('#springLoadApps').addEventListener('click', () => {
+  const next = !$('#springLoadApps').classList.contains('on');
+  $('#springLoadApps').classList.toggle('on', next);
+  window.dock.invoke('set-setting', { key: 'springLoadApps', value: next });
+});
+$('#showDelay').addEventListener('input', (e) => {
+  if (applying) return;
+  const v = parseInt(e.target.value, 10);
+  $('#showDelayVal').textContent = v + 'ms';
+  window.dock.invoke('set-setting', { key: 'showDelayMs', value: v });
+});
+$('#hideDelay').addEventListener('input', (e) => {
+  if (applying) return;
+  const v = parseInt(e.target.value, 10);
+  $('#hideDelayVal').textContent = v + 'ms';
+  window.dock.invoke('set-setting', { key: 'hideDelayMs', value: v });
 });
 $('#autologin').addEventListener('click', () => {
   const next = !$('#autologin').classList.contains('on');

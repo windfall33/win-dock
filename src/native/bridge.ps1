@@ -131,6 +131,21 @@ while ($true) {
         'taskbar-state'   { Invoke-TaskbarState $cid $argsObj }
         'taskbar-autohide' { Invoke-TaskbarAutohide $cid $argsObj }
         'set-workarea'    { Invoke-SetWorkarea $cid $argsObj }
+        'mission-control' {
+            try { [NativeOps]::OpenTaskView(); Emit $cid $true @{} }
+            catch { Emit $cid $false @{ err = $_.Exception.Message } }
+        }
+        'move-window-to' {
+            try {
+                $h = [IntPtr][long]([double]::Parse([string]$argsObj.h))
+                $ok = [NativeOps]::MoveWindowToRect($h, [int]$argsObj.x, [int]$argsObj.y, [int]$argsObj.w, [int]$argsObj.h)
+                Emit $cid $true @{ ok = $ok }
+            } catch { Emit $cid $false @{ err = $_.Exception.Message } }
+        }
+        'list-displays' {
+            # Electron 主进程已有 screen API；此命令备用（桥接侧不解析显示器）
+            Emit $cid $true @{ displays = @() }
+        }
         'empty-trash'     { Invoke-EmptyTrash $cid $argsObj }
         'recycle'         { Invoke-Recycle $cid $argsObj }
         'move-files'      { Invoke-MoveFiles $cid $argsObj }

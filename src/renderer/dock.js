@@ -22,6 +22,12 @@ window.dock.onSettings((s) => {
     autohide: s.autohide,
     keepVisible: !!s.keepVisible,
     showIndicators: s.showIndicators !== false,
+    showRecents: s.showRecents !== false,
+    staticOnly: !!s.staticOnly,
+    scrollToOpen: !!s.scrollToOpen,
+    springLoadApps: !!s.springLoadApps,
+    showDelayMs: Number(s.showDelayMs) || 150,
+    hideDelayMs: Number(s.hideDelayMs) || 360,
   });
   syncCssVars();
   syncAutohideTimer();

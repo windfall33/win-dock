@@ -87,7 +87,11 @@ function computeTargets(mx, my, fit) {
       const vD = Math.max(0, (S.POS === 'left' ? mx - barRect.left : barRect.right - mx));
       vmod = Math.max(0.2, 1 - vD / (BASE * 2.6));
     }
-    out.push({ s, t: 1 + (S.OPT.magnification - 1) * k * vmod });
+    // macOS Control-Shift + 访问 Dock：临时开关放大（这里 Shift 按住时强制满倍率）
+    const mag = S.shiftMagBoost
+      ? Math.max(S.OPT.magnification, 1.8)
+      : S.OPT.magnification;
+    out.push({ s, t: 1 + (mag - 1) * k * vmod });
   }
   return out;
 }
@@ -254,6 +258,8 @@ document.addEventListener('mousemove', (ev) => {
   S.mouseX = ev.clientX;
   S.mouseY = ev.clientY;
   S.lastInteractTs = Date.now();
+  // macOS Control-Shift + 访问 Dock：按住 Shift 强制放大
+  S.shiftMagBoost = !!ev.shiftKey;
   // 高频 mousemove（可达 500Hz+）比帧率高一个量级：完整处理（读 rect + 穿透判定）
   // 去抖到每帧一次，事件流里只更新坐标；否则鼠标一动就强制 layout 空转
   if (!S.mouseProcQueued) {

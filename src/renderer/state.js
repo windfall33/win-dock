@@ -8,7 +8,7 @@
 
 export const S = {
   STATE: null,
-  OPT: { iconSize: 52, magnification: 1.8, autohide: false, keepVisible: false, showIndicators: true, showDelayMs: 150, hideDelayMs: 360 },
+  OPT: { iconSize: 52, magnification: 1.8, autohide: false, keepVisible: true, showIndicators: true, showRecents: true, staticOnly: false, scrollToOpen: false, springLoadApps: false, showDelayMs: 150, hideDelayMs: 360 },
   POS: 'bottom',            // dock 位置：bottom | left | right（镜像主进程 settings.position）
   mouseX: -9999, mouseY: -9999,
   pointerInsideBar: false,
@@ -32,6 +32,7 @@ export const S = {
   springTimer: null,
   kbdNavActive: false,
   fisheyeFrozen: false,
+  shiftMagBoost: false,   // 按住 Shift 临时强制放大（macOS Control-Shift 访问 Dock 近似）
   fitScale: 1,              // P2-F4 满屏压缩系数（基准尺寸超出屏宽时 <1）
   shiftRelease: false,
   rafRunning: false,
@@ -256,6 +257,10 @@ window.dock.onState((snap) => {
     S.OPT.autohide = !!snap.settings.autohide;
     S.OPT.keepVisible = !!snap.settings.keepVisible;
     S.OPT.showIndicators = snap.settings.showIndicators !== false;
+    S.OPT.showRecents = snap.settings.showRecents !== false;
+    S.OPT.staticOnly = !!snap.settings.staticOnly;
+    S.OPT.scrollToOpen = !!snap.settings.scrollToOpen;
+    S.OPT.springLoadApps = !!snap.settings.springLoadApps;
     S.OPT.showDelayMs = Number(snap.settings.showDelayMs) || 150;
     S.OPT.hideDelayMs = Number(snap.settings.hideDelayMs) || 360;
     syncCssVars();

@@ -161,6 +161,10 @@ function registerShortcuts() {
     } catch (e) { log('dock focus failed', e.message); }
     ctx.dockWin.webContents.send('focus-dock');
   });
+  // Mission Control 等价：唤起 Windows 任务视图（Win+Tab）
+  bind('CommandOrControl+Alt+Up', () => {
+    if (ctx.bridge) ctx.bridge.request('mission-control', {}, 4000).catch(() => {});
+  });
 }
 
 // ---------------------------------------------------------------------------

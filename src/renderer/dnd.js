@@ -292,6 +292,8 @@ stackPanelEl.addEventListener('mousedown', (ev) => {
 
 let wheelExposeAt = 0;
 itemsEl.addEventListener('wheel', (ev) => {
+  // macOS scroll-to-open 默认关闭；仅用户显式打开时滚轮才触发
+  if (!S.OPT.scrollToOpen) return;
   const slot = ev.target.closest('.slot');
   if (!slot) return;
   const holder = slotMap.get(slot.dataset.id);
@@ -697,7 +699,8 @@ document.addEventListener('dragover', (ev) => {
       ensureRaf();
     }
   }
-  // spring-loaded：拖文件悬停文件夹图标 ~700ms 自动展开其 Stack 面板
+  // spring-loaded：拖文件悬停文件夹图标 ~700ms 自动展开其 Stack 面板；
+  // 开启 springLoadApps 时，悬停应用图标同样自动启动（macOS 对应默认关）
   if (S.springTimer) { clearTimeout(S.springTimer); S.springTimer = null; }
   if (slot && slot.dataset.kind === 'folder') {
     const sc = slotMap.get(slot.dataset.id);
@@ -706,6 +709,17 @@ document.addEventListener('dragover', (ev) => {
       S.springTimer = setTimeout(() => {
         S.springTimer = null;
         if (S.externalDragActive && S.extDragHighlight === slot) openStack(fp, slot);
+      }, 700);
+    }
+  } else if (slot && slot.dataset.kind === 'app' && S.OPT.springLoadApps) {
+    const sc = slotMap.get(slot.dataset.id);
+    const entry = sc && sc.entry;
+    if (entry && entry.exe && !(entry.windows || []).length) {
+      S.springTimer = setTimeout(() => {
+        S.springTimer = null;
+        if (S.externalDragActive && S.extDragHighlight === slot) {
+          window.dock.invoke('launch', { exe: entry.exe, launch: entry.launch || null, args: entry.args || [] });
+        }
       }, 700);
     }
   }

@@ -234,20 +234,18 @@ html.dark .divider {
     transparent, rgba(255,255,255,0.42) 22%, rgba(255,255,255,0.42) 78%, transparent);
 }
 
-/* 启动弹跳（macOS 语义：弹到应用就绪为止，JS 轮询到窗口出现后移除类，封顶 3s）。
-   启动期等高三连跳循环 + squash & stretch */
+/* 启动弹跳：两轮衰减（macOS 观感），JS 就绪后移除类；侧栏横跳同步 */
 @keyframes mac-bounce {
   0%   { transform: translateY(0) scaleY(1); }
-  12%  { transform: translateY(-24px) scaleY(1.05); }
-  25%  { transform: translateY(0) scaleY(.95); }
-  37%  { transform: translateY(-22px) scaleY(1.04); }
-  50%  { transform: translateY(0) scaleY(.96); }
-  62%  { transform: translateY(-20px) scaleY(1.03); }
-  75%  { transform: translateY(0) scaleY(.97); }
-  87%  { transform: translateY(-18px) scaleY(1.02); }
+  10%  { transform: translateY(-28px) scaleY(1.06); }
+  22%  { transform: translateY(0) scaleY(.94); }
+  34%  { transform: translateY(-16px) scaleY(1.03); }
+  46%  { transform: translateY(0) scaleY(.97); }
+  58%  { transform: translateY(-8px) scaleY(1.01); }
+  70%  { transform: translateY(0) scaleY(1); }
   100% { transform: translateY(0) scaleY(1); }
 }
-.slot.bouncing img.app-icon { animation: mac-bounce 1.2s cubic-bezier(.28,.5,.4,1) infinite; }
+.slot.bouncing img.app-icon { animation: mac-bounce 1.1s cubic-bezier(.28,.5,.4,1) 2; }
 
 /* ================= tooltip ================= */
 

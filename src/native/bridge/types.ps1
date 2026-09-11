@@ -603,6 +603,30 @@ public class NativeOps {
         }
     }
 
+    // ---- Mission Control：唤起 Windows 任务视图（Win+Tab 等价）----
+    const byte VK_LWIN_MC = 0x5B;
+    const byte VK_TAB_MC = 0x09;
+    public static void OpenTaskView() {
+        try {
+            keybd_event(VK_LWIN_MC, 0, 0, UIntPtr.Zero);
+            keybd_event(VK_TAB_MC, 0, 0, UIntPtr.Zero);
+            System.Threading.Thread.Sleep(40);
+            keybd_event(VK_TAB_MC, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            keybd_event(VK_LWIN_MC, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        } catch {}
+    }
+
+    // 把窗口移到指定显示器工作区中央偏下（分配到显示器）
+    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
+        int X, int Y, int cx, int cy, uint uFlags);
+    const uint SWP_NOSIZE = 0x0001;
+    const uint SWP_NOZORDER = 0x0004;
+    const uint SWP_SHOWWINDOW = 0x0040;
+    public static bool MoveWindowToRect(IntPtr h, int x, int y, int w, int hgt) {
+        try { return SetWindowPos(h, IntPtr.Zero, x, y, w, hgt, SWP_NOZORDER | SWP_SHOWWINDOW); }
+        catch { return false; }
+    }
+
     // ---- WinEvent：窗口创建/销毁/前台变化，事件驱动主进程尽快刷新 ----
     public static readonly object OutLock = new object();
     public delegate void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,

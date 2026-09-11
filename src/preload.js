@@ -13,6 +13,7 @@ const INVOKE_OK = new Set([
   'window-thumb', 'launchpad-open', 'launchpad-close', 'launchpad-data', 'launchpad-launch',
   'expose-open', 'expose-close',
   'set-bar-rect',
+  'mission-control', 'move-window-to', 'list-displays', 'move-app-to-display',
 ]);
 
 contextBridge.exposeInMainWorld('dock', {

@@ -520,6 +520,13 @@ async function showAppMenu(x, y, entry) {
       loginOn = !!(st && st.on);
     } catch {}
   }
+  let displays = [];
+  if (wins.length > 0) {
+    try {
+      const dr = await window.dock.invoke('list-displays');
+      displays = (dr && dr.displays) || [];
+    } catch {}
+  }
 
   if (wins.length > 0) {
     for (const w of wins.slice(0, 9)) {
@@ -547,7 +554,6 @@ async function showAppMenu(x, y, entry) {
     });
   }
   if (entry.exe) {
-    // UWP 宿主等无 exe 的条目不提供（无稳定启动目标可写启动文件夹）
     options.push({
       label: '登录时打开' + (loginOn ? '  ✓' : ''),
       action: () => window.dock.invoke('set-login-open', {
@@ -561,17 +567,28 @@ async function showAppMenu(x, y, entry) {
       label: '从 Dock 中移除',
       action: () => window.dock.invoke('pin-remove', { id: entry.id }),
     });
-    // 顶层也放一份：用户反馈找不到「删除」入口（原先只在「选项」子菜单里）
     defs.push({
       label: '从 Dock 中移除',
       action: () => window.dock.invoke('pin-remove', { id: entry.id }),
     });
   } else if (entry.exe) {
-    // UWP 宿主等无 exe 的条目固定后无法启动，不提供固定
     options.push({
       label: '固定到 Dock',
       action: () =>
         window.dock.invoke('pin-add', { id: entry.id, name: entry.name, exe: entry.exe }),
+    });
+  }
+  // 分配到显示器（macOS「分配到桌面」的 Windows 映射）
+  if (displays.length >= 2) {
+    options.push({
+      label: '分配到显示器',
+      children: displays.map((d) => ({
+        label: (d.primary ? '主显示器' : d.label || `显示器`) + `（${d.index}）`,
+        action: () => window.dock.invoke('move-app-to-display', {
+          displayId: d.id,
+          hs: wins.map((w) => w.h),
+        }),
+      })),
     });
   }
   if (options.length) defs.push({ label: '选项', children: options });
@@ -605,6 +622,7 @@ async function showAppMenu(x, y, entry) {
 function showDockMenu(x, y) {
   showMenu(x, y, [
     { label: '启动台', action: () => window.dock.invoke('launchpad-open') },
+    { label: '窗口总览（任务视图）', action: () => window.dock.invoke('mission-control') },
     { label: '添加应用…', action: () => window.dock.invoke('pick-app') },
     { label: '添加文件夹…', action: () => window.dock.invoke('pick-folder') },
     { label: 'Dock 设置…', action: () => window.dock.invoke('open-settings') },
@@ -612,6 +630,10 @@ function showDockMenu(x, y) {
     {
       label: S.OPT.autohide ? '关闭自动隐藏' : '打开自动隐藏',
       action: () => window.dock.invoke('set-setting', { key: 'autohide', value: !S.OPT.autohide }),
+    },
+    {
+      label: (S.OPT.staticOnly ? '关闭' : '打开') + '只显示运行中',
+      action: () => window.dock.invoke('set-setting', { key: 'staticOnly', value: !S.OPT.staticOnly }),
     },
   ]);
 }

@@ -114,6 +114,41 @@
     </div>
     <div class="row">
       <div>
+        <div class="label">只显示运行中</div>
+        <div class="hint">隐藏全部固定项，Dock 变纯运行区（macOS static-only）</div>
+      </div>
+      <div class="toggle" id="staticOnly"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">滚轮悬停切换窗口</div>
+        <div class="hint">在图标上滚动 = Exposé / 展开堆栈（macOS scroll-to-open，默认关）</div>
+      </div>
+      <div class="toggle" id="scrollToOpen"></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">拖文件悬停打开应用</div>
+        <div class="hint">拖文件悬停在应用图标上自动打开（macOS spring-load，默认关）</div>
+      </div>
+      <div class="toggle" id="springLoadApps"></div>
+    </div>
+    <div class="row">
+      <div><div class="label">唤回延迟</div><div class="hint">贴边后多久唤出 Dock（macOS 默认约 200ms）</div></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input id="showDelay" type="range" min="50" max="600" step="10">
+        <span class="val" id="showDelayVal"></span>
+      </div>
+    </div>
+    <div class="row">
+      <div><div class="label">收起延迟</div><div class="hint">指针离开后多久收起</div></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input id="hideDelay" type="range" min="100" max="1200" step="20">
+        <span class="val" id="hideDelayVal"></span>
+      </div>
+    </div>
+    <div class="row">
+      <div>
         <div class="label">外观</div>
       </div>
       <select id="appearance">

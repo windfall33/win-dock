@@ -21,8 +21,11 @@ const DEFAULTS = {
   minimizeIntoIcon: false, // 最小化窗口收进对应应用图标（mac 的 Minimize window into app icon）
   showIndicators: true,  // 运行指示点（macOS「Show indicators for open applications」，默认开）
   showRecents: true,     // 最近应用区（macOS「Show suggested and recent apps in Dock」，默认开）
-  showDelayMs: 150,      // 贴边唤回延迟 ms（对齐 macOS autohide-delay 语义；GUI 不暴露，config.json 可调）
-  hideDelayMs: 360,      // 指针离开后的收起延迟 ms（macOS 节奏位 autohide-time-modifier 的对应物，同上不进 GUI）
+  staticOnly: false,     // 只显示运行中（macOS static-only：隐藏全部固定项，Dock 变纯运行区）
+  scrollToOpen: false,   // 悬停滚轮触发 Exposé/展开堆栈（macOS scroll-to-open，默认关）
+  springLoadApps: false, // 拖文件悬停自动打开应用（macOS enable-spring-load-actions-on-all-items，默认关）
+  showDelayMs: 150,      // 贴边唤回延迟 ms（对齐 macOS autohide-delay 默认 0.2s）
+  hideDelayMs: 360,      // 指针离开后的收起延迟 ms（autohide-time-modifier 对应物）
   recentApps: [],        // 最近打开应用 LRU
   pollFastMs: 450,       // 状态有变后的快速轮询间隔（应用启动/关闭/切窗）
   pollIdleMs: 1600,      // 稳定空闲时的慢轮询间隔（省桥接往返）

@@ -40,6 +40,14 @@
 | Dock 常驻默认开（macOS 恒浮；可关改智能收起） | ✅ |
 | 每屏一条 Dock（可选，macOS separate Spaces） | ✅ |
 | 下载/传输进度环（标题 % 启发式） | ✅ |
+| 只显示运行中（macOS static-only） | ✅ |
+| 滚轮悬停开关（macOS scroll-to-open，默认关） | ✅ |
+| 拖文件悬停打开应用（spring-load，默认关） | ✅ |
+| 唤回/收起延迟可调（GUI） | ✅ |
+| 分配到显示器（多屏时选项子菜单） | ✅ |
+| 任务视图 Mission Control（Ctrl+Alt+↑ / 空白右键） | ✅ |
+| Shift 按住临时强制放大 | ✅ |
+| 弹跳两轮衰减（更接近 mac） | ✅ |
 | Dock 位置切换（底部 / 左侧 / 右侧） | ✅ |
 | 多显示器跟随（鼠标移到哪屏，Dock 与顶栏跟到哪屏） | ✅ |
 | 最小化 genie 动画（窗口吸入 Dock，可中断/重放） | ✅ |
