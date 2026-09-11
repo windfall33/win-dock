@@ -1,9 +1,10 @@
 # macOS 原版 Dock 全面调研 × Win Dock 差距报告
 
 > 调研日期：2026-09-11  
-> 代码基线：`win-dock@1.2.1`（`5708fe3`）  
-> 方法：Apple 一手文档（Desktop & Dock / Use the Dock / Folders in Dock / Keyboard Shortcuts 102650）  
-> + macos-defaults.com 参数表 + 对当前 HEAD 全源码逐模块审计。
+> 代码基线：`win-dock@1.3.0`  
+> 方法：Apple 一手文档 + macos-defaults + HEAD 源码审计。  
+> **1.3.0 已落地 P0**：static-only / scroll-to-open 默认关 / autohide 节奏 GUI / 分配到显示器 / 任务视图；  
+> **P1 部分落地**：弹跳衰减、Shift 临时放大、spring-load 应用开关。
 
 ---
 
