@@ -223,7 +223,9 @@ function processMousePosition() {
   const overBar = !S.dockHiddenNow && !S.fullscreenHideNow && pointOverBar(barRect, S.mouseX, S.mouseY);
 
   const overlayOpen = S.menuOpen || !!S.stackCurrent || !!S.previewState;
-  if (overBar !== S.pointerInsideBar && !overlayOpen) {
+  // 拖拽期间禁止改穿透：startInternalDrag 会把 mouseX 置为哨兵，若此时把
+  // click-through 打回 true，拖拽会丢事件、结束后放大也卡死
+  if (overBar !== S.pointerInsideBar && !overlayOpen && !S.dragState) {
     S.pointerInsideBar = overBar;
     window.dock.invoke('set-click-through', { on: !overBar });
   }
@@ -262,6 +264,7 @@ document.addEventListener('mousemove', (ev) => {
 }, { passive: true });
 
 document.addEventListener('mouseleave', () => {
+  if (S.dragState) return; // 拖拽中忽略，避免丢事件
   S.mouseX = -9999; S.mouseY = -9999;
   S.pointerInsideBar = false;
   if (!S.menuOpen && !S.stackCurrent && !S.previewState) {

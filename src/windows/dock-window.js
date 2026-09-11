@@ -116,7 +116,9 @@ function createDockWindow(ctx) {
         backgroundThrottling: false,
       },
     });
-    dockWin.setAlwaysOnTop(true, 'screen-saver');
+    // floating 而非 screen-saver：screen-saver 会盖住系统托盘弹层/时钟等
+    // 右下角浮层；floating 已足够压过普通应用，托盘可正常点开
+    dockWin.setAlwaysOnTop(true, 'floating');
     dockWin.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
     dockWin.once('ready-to-show', () => {
       dockWin.showInactive();
@@ -237,10 +239,10 @@ function createDockWindow(ctx) {
 
   function assertWindowLevels() {
     try {
-      forEachDockWin((w) => w.setAlwaysOnTop(true, 'screen-saver'));
+      forEachDockWin((w) => w.setAlwaysOnTop(true, 'floating'));
       const { topbarWin, launchpadWin } = ctx;
-      if (topbarWin && !topbarWin.isDestroyed()) topbarWin.setAlwaysOnTop(true, 'screen-saver');
-      if (launchpadWin && !launchpadWin.isDestroyed()) launchpadWin.setAlwaysOnTop(true, 'screen-saver');
+      if (topbarWin && !topbarWin.isDestroyed()) topbarWin.setAlwaysOnTop(true, 'floating');
+      if (launchpadWin && !launchpadWin.isDestroyed()) launchpadWin.setAlwaysOnTop(true, 'floating');
     } catch {}
   }
 

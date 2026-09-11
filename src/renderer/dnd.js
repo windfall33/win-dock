@@ -382,24 +382,24 @@ itemsEl.addEventListener('mousedown', (ev) => {
   let dragging = false;
 
   const onMove = (mev) => {
-    if (mev.buttons !== 1) { finish(true); return; }
+    if (mev.buttons !== 1) { finish(true, mev); return; }
     if (!dragging) {
       // 拖拽阈值判定保持在修饰键判定之前：修饰键点击不影响拖拽排序
       if (Math.abs(mev.clientX - startX) + Math.abs(mev.clientY - startY) < 6) return;
-      if (id === '__trash__' || (slot.dataset.kind !== 'app' && slot.dataset.kind !== 'folder')) { finish(false); return; }
+      if (id === '__trash__' || (slot.dataset.kind !== 'app' && slot.dataset.kind !== 'folder')) { finish(false, mev); return; }
       dragging = true;
       startInternalDrag(id, slot, mev);
     } else {
       moveInternalDrag(mev);
     }
   };
-  const finish = (cancelled) => {
+  const finish = (cancelled, endEv) => {
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
-    if (dragging) endInternalDrag(ev, cancelled);
+    if (dragging) endInternalDrag(endEv || ev, cancelled);
     else if (!cancelled) handleClick(id, entryAtDown, modsAtDown);
   };
-  const onUp = () => finish(false);
+  const onUp = (uev) => finish(false, uev);
 
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
@@ -480,6 +480,8 @@ export function handleClick(id, entryAtPress, mods) {
 
 function startInternalDrag(id, slot, ev) {
   cancelTooltip();
+  // 拖拽期间保持可交互（forward 模式下仍需捕获 mousemove/mouseup）
+  window.dock.invoke('set-click-through', { on: false });
   S.mouseX = -9999;
   const imgEl = slot.querySelector('img.app-icon');
 
@@ -507,6 +509,8 @@ function startInternalDrag(id, slot, ev) {
 
 function moveInternalDrag(ev) {
   if (!S.dragState) return;
+  S.dragState.lastX = ev.clientX;
+  S.dragState.lastY = ev.clientY;
   S.dragState.ghost.style.left = (ev.clientX - S.OPT.iconSize / 2) + 'px';
   S.dragState.ghost.style.top = (ev.clientY - S.OPT.iconSize / 2) + 'px';
 
@@ -576,8 +580,22 @@ function endInternalDrag(_ev, cancelled) {
   // P2-F1b：不清 transform（弹簧回位中），只清理置灰；回位 settled 后统一清除
   S.shiftRelease = true;
   itemsEl.querySelectorAll('.slot').forEach(el => { el.style.opacity = ''; });
-  S.mouseX = _ev ? _ev.clientX : -9999;
+  // 用真实指针位置恢复：否则 mouseX 停在哨兵上，鱼眼/穿透判定全部失效
+  const px = (_ev && Number.isFinite(_ev.clientX)) ? _ev.clientX : (st.lastX != null ? st.lastX : -9999);
+  const py = (_ev && Number.isFinite(_ev.clientY)) ? _ev.clientY : (st.lastY != null ? st.lastY : -9999);
+  S.mouseX = px;
+  S.mouseY = py;
   ensureRaf();
+  // 若指针仍在条上，保持可交互以便立即继续放大；否则恢复穿透
+  requestAnimationFrame(() => {
+    try {
+      const barRect = barEl.getBoundingClientRect();
+      const inside = px >= barRect.left - 4 && px <= barRect.right + 4 &&
+        py >= barRect.top - (S.OPT.iconSize || 52) && py <= barRect.bottom + 4;
+      S.pointerInsideBar = inside;
+      window.dock.invoke('set-click-through', { on: !inside });
+    } catch {}
+  });
 
   if (cancelled) return;
 

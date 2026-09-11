@@ -561,6 +561,11 @@ async function showAppMenu(x, y, entry) {
       label: '从 Dock 中移除',
       action: () => window.dock.invoke('pin-remove', { id: entry.id }),
     });
+    // 顶层也放一份：用户反馈找不到「删除」入口（原先只在「选项」子菜单里）
+    defs.push({
+      label: '从 Dock 中移除',
+      action: () => window.dock.invoke('pin-remove', { id: entry.id }),
+    });
   } else if (entry.exe) {
     // UWP 宿主等无 exe 的条目固定后无法启动，不提供固定
     options.push({

@@ -225,8 +225,9 @@ export function applyEnv(env) {
   const letHide = S.fullscreenHideNow || S.coveredHideNow;
   const hide = S.dockHiddenNow || (letHide && !hooks.dockStayZone());
   rootEl.classList.toggle('hidden-away', hide);
-  // 隐藏时整窗必须穿透，探针负责唤回
-  if (hide && S.pointerInsideBar) {
+  // 隐藏时整窗必须穿透：无论 pointerInsideBar 当时是什么，否则透明条带
+  // 会吃掉下方应用点击（「点了没反应，要再唤一次才好」的根因）
+  if (hide) {
     S.pointerInsideBar = false;
     window.dock.invoke('set-click-through', { on: true });
   }

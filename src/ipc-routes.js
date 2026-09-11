@@ -62,7 +62,7 @@ function createIpcRoutes(ctx) {
     return { ok: true };
   }
 
-  async function handleInvoke(channel, p) {
+  async function handleInvoke(channel, p, meta = {}) {
     switch (channel) {
 
       case 'ready':
@@ -70,15 +70,19 @@ function createIpcRoutes(ctx) {
         ctx.setClickThrough(true);
         return { ok: true };
 
-      case 'set-click-through':
-        ctx.setClickThrough(!!p.on);
-        ctx.mouseAtBottom = !p.on;
+      case 'set-click-through': {
+        // 只作用于发起方那条 Dock（多屏时各条独立）；缺省退回全部
+        ctx.setClickThrough(!!p.on, meta.__senderWin || undefined);
+        if (!meta.__senderWin) ctx.mouseAtBottom = !p.on;
         ctx.sendEnv();
         return { ok: true };
+      }
 
       case 'request-hide':   // autohide：鼠标离开后滑出
         ctx.dockHiddenByUs = true;
         ctx.mouseAtBottom = false;
+        // 隐藏必须立刻穿透，否则透明条带会吃掉下方应用的点击（用户反馈的「点了没反应」）
+        ctx.setClickThrough(true);
         ctx.sendEnv();
         return { ok: true };
 
@@ -335,9 +339,13 @@ function createIpcRoutes(ctx) {
   }
 
   function registerIpc() {
-    ipcMain.handle('dock:invoke', async (_ev, channel, payload) => {
+    ipcMain.handle('dock:invoke', async (ev, channel, payload) => {
       try {
-        return await handleInvoke(channel, payload || {});
+        const { BrowserWindow } = require('electron');
+        const win = ev && ev.sender ? BrowserWindow.fromWebContents(ev.sender) : null;
+        // handleInvoke 内用 channel.__senderWin 定位发起窗口（set-click-through 等）
+        const meta = { __senderWin: win || null };
+        return await handleInvoke(channel, payload || {}, meta);
       } catch (e) {
         log('invoke failed', channel, e.message);
         return { ok: false, err: e.message };
@@ -352,43 +360,32 @@ function createIpcRoutes(ctx) {
   }
 
   function broadcastSettings() {
-    if (ctx.dockWin && !ctx.dockWin.isDestroyed()) {
-      ctx.dockWin.webContents.send('settings', {
-        iconSize: ctx.settings.get('iconSize'),
-        magnification: ctx.settings.get('magnification'),
-        autohide: ctx.settings.get('autohide'),
-        appearance: ctx.settings.get('appearance'),
-        hideTaskbar: ctx.settings.get('hideTaskbar'),
-        showTopbar: ctx.settings.get('showTopbar'),
-        multidisplay: ctx.settings.get('multidisplay'),
-        occludeAway: ctx.settings.get('occludeAway'),
-        position: ctx.settings.get('position'),
-        minimizeEffect: ctx.settings.get('minimizeEffect'),
-        minimizeIntoIcon: !!ctx.settings.get('minimizeIntoIcon'),
-        keepVisible: !!ctx.settings.get('keepVisible'),
-        showIndicators: ctx.settings.get('showIndicators') !== false,
-        showRecents: ctx.settings.get('showRecents') !== false,
-        dockPerDisplay: !!ctx.settings.get('dockPerDisplay'),
-      });
+    const payloadDock = {
+      iconSize: ctx.settings.get('iconSize'),
+      magnification: ctx.settings.get('magnification'),
+      autohide: ctx.settings.get('autohide'),
+      appearance: ctx.settings.get('appearance'),
+      hideTaskbar: ctx.settings.get('hideTaskbar'),
+      showTopbar: ctx.settings.get('showTopbar'),
+      multidisplay: ctx.settings.get('multidisplay'),
+      occludeAway: ctx.settings.get('occludeAway'),
+      position: ctx.settings.get('position'),
+      minimizeEffect: ctx.settings.get('minimizeEffect'),
+      minimizeIntoIcon: !!ctx.settings.get('minimizeIntoIcon'),
+      keepVisible: !!ctx.settings.get('keepVisible'),
+      showIndicators: ctx.settings.get('showIndicators') !== false,
+      showRecents: ctx.settings.get('showRecents') !== false,
+      dockPerDisplay: !!ctx.settings.get('dockPerDisplay'),
+    };
+    if (ctx.forEachDockWin) {
+      ctx.forEachDockWin((w) => w.webContents.send('settings', payloadDock));
+    } else if (ctx.dockWin && !ctx.dockWin.isDestroyed()) {
+      ctx.dockWin.webContents.send('settings', payloadDock);
     }
     if (ctx.settingsWin && !ctx.settingsWin.isDestroyed()) {
       ctx.settingsWin.webContents.send('settings', {
-        iconSize: ctx.settings.get('iconSize'),
-        magnification: ctx.settings.get('magnification'),
-        autohide: ctx.settings.get('autohide'),
-        appearance: ctx.settings.get('appearance'),
+        ...payloadDock,
         launchAtLogin: ctx.settings.get('launchAtLogin'),
-        hideTaskbar: ctx.settings.get('hideTaskbar'),
-        showTopbar: ctx.settings.get('showTopbar'),
-        multidisplay: ctx.settings.get('multidisplay'),
-        occludeAway: ctx.settings.get('occludeAway'),
-        position: ctx.settings.get('position'),
-        minimizeEffect: ctx.settings.get('minimizeEffect'),
-        minimizeIntoIcon: !!ctx.settings.get('minimizeIntoIcon'),
-        keepVisible: !!ctx.settings.get('keepVisible'),
-        showIndicators: ctx.settings.get('showIndicators') !== false,
-        showRecents: ctx.settings.get('showRecents') !== false,
-        dockPerDisplay: !!ctx.settings.get('dockPerDisplay'),
       });
     }
   }

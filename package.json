@@ -1,7 +1,7 @@
 {
   "name": "win-dock",
   "productName": "Win Dock",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A pixel-faithful macOS-style Dock for Windows",
   "main": "src/main.js",
   "author": "windfall33",
