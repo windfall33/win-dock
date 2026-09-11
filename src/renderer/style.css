@@ -1,28 +1,69 @@
-/* ================= macOS Dock for Windows — visual layer ================= */
+/* ================= Win Dock — signature glass visual layer ================= */
 
 :root {
-  --glass-bg-1: rgba(255, 255, 255, 0.46);
-  --glass-bg-2: rgba(255, 255, 255, 0.24);
-  --glass-border: rgba(255, 255, 255, 0.48);
-  /* 玻璃层次：外投影 + 顶部锐高光 + 底部反光 + 底缘收暗（厚度感） */
-  --glass-shadow: 0 18px 48px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0.5px -0.5px rgba(255, 255, 255, 0.78),
-    inset 0 -1.5px 1px -0.5px rgba(255, 255, 255, 0.16),
-    inset 0 -12px 16px -14px rgba(0, 0, 0, 0.28);
-  --dot-color: rgba(20, 20, 20, 0.82);
-  --tooltip-bg: rgba(46, 46, 48, 0.78);
-  --menu-bg: rgba(38, 38, 40, 0.66);
+  --glass-bg-1: rgba(255, 255, 255, 0.42);
+  --glass-bg-2: rgba(255, 255, 255, 0.18);
+  --glass-border: rgba(255, 255, 255, 0.55);
+  --glass-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -14px 18px -12px rgba(0, 0, 0, 0.22);
+  --sheen: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.28) 48%, rgba(255,255,255,0.08) 56%, transparent 70%);
+  --noise-opacity: 0.07;
+  --plate-from: rgba(255, 255, 255, 0.97);
+  --plate-to: rgba(232, 236, 242, 0.92);
+  --plate-edge: rgba(0, 0, 0, 0.08);
+  --bloom: rgba(140, 180, 255, 0.55);
+  --bloom-hot: rgba(120, 200, 255, 0.85);
+  --dot-color: rgba(20, 20, 20, 0.85);
+  --dot-glow: rgba(255, 255, 255, 0.7);
+  --tooltip-bg: rgba(40, 42, 48, 0.82);
+  --menu-bg: rgba(32, 34, 40, 0.72);
 }
 
 html.dark {
-  --glass-bg-1: rgba(62, 62, 70, 0.52);
-  --glass-bg-2: rgba(22, 22, 26, 0.46);
-  --glass-border: rgba(255, 255, 255, 0.20);
-  --glass-shadow: 0 18px 48px rgba(0, 0, 0, 0.50),
-    inset 0 1px 0.5px -0.5px rgba(255, 255, 255, 0.30),
+  --glass-bg-1: rgba(70, 74, 88, 0.48);
+  --glass-bg-2: rgba(18, 20, 28, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.22);
+  --glass-shadow:
+    0 24px 56px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -16px 20px -12px rgba(0, 0, 0, 0.5);
+  --sheen: linear-gradient(105deg, transparent 38%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.03) 58%, transparent 72%);
+  --noise-opacity: 0.1;
+  --dot-color: rgba(240, 244, 255, 0.95);
+  --dot-glow: rgba(160, 200, 255, 0.75);
+  --bloom: rgba(100, 160, 255, 0.45);
+}
+
+html.dark.theme-obsidian {
+  --glass-bg-1: rgba(40, 44, 58, 0.72);
+  --glass-bg-2: rgba(8, 10, 16, 0.78);
+  --glass-border: rgba(180, 200, 255, 0.28);
+  --glass-shadow:
+    0 28px 60px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(120, 160, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 40px rgba(80, 120, 255, 0.06);
+}
+
+html.theme-classic {
+  --noise-opacity: 0;
+  --sheen: none;
+  --bloom: transparent;
+  --bloom-hot: transparent;
+  --glass-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0.5px -0.5px rgba(255, 255, 255, 0.72),
+    inset 0 -1.5px 1px -0.5px rgba(255, 255, 255, 0.14),
+    inset 0 -12px 16px -14px rgba(0, 0, 0, 0.28);
+}
+html.dark.theme-classic {
+  --glass-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0.5px -0.5px rgba(255, 255, 255, 0.3),
     inset 0 -1.5px 1px -0.5px rgba(255, 255, 255, 0.08),
     inset 0 -12px 16px -14px rgba(0, 0, 0, 0.42);
-  --dot-color: rgba(240, 240, 248, 0.92);
 }
 
 * { user-select: none; -webkit-user-select: none; cursor: default; }
@@ -35,8 +76,6 @@ html, body {
   font-family: "SF Pro Text", "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", sans-serif;
 }
 
-/* 整个 dock-root 贴窗口底部；--edge-inset 让出 Windows 任务栏区域
-   （Dock 窗口已延伸到屏幕真实底边，条本体仍悬在任务栏上方） */
 #dock-root {
   position: fixed;
   left: 0; right: 0; bottom: 0;
@@ -56,13 +95,32 @@ html, body {
   border-radius: 22px;
   border: 1px solid var(--glass-border);
   background: linear-gradient(to bottom, var(--glass-bg-1), var(--glass-bg-2));
-  backdrop-filter: blur(18px) saturate(1.6) brightness(1.05);
-  -webkit-backdrop-filter: blur(18px) saturate(1.6) brightness(1.05);
+  backdrop-filter: blur(22px) saturate(1.75) brightness(1.06);
+  -webkit-backdrop-filter: blur(22px) saturate(1.75) brightness(1.06);
   box-shadow: var(--glass-shadow);
+  overflow: hidden;
+  isolation: isolate;
 }
 
-/* 图标排布：由 JS 按放大算法直接设定每格宽度，模拟 macOS 的连续挤压效果 */
+#dock-bar::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  opacity: var(--noise-opacity, 0.07);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+  mix-blend-mode: overlay;
+}
+
+#dock-bar::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background: var(--sheen, none);
+  mix-blend-mode: soft-light;
+}
+
 #dock-items {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: flex-end;
   padding: var(--bar-pad-y, 6px) var(--bar-pad-x, 12px) calc(var(--bar-pad-y, 6px) + 3px) var(--bar-pad-x, 12px);
@@ -84,40 +142,57 @@ html, body {
   justify-content: center;
 }
 
+.slot .icon-wrap::after {
+  content: '';
+  position: absolute; left: 50%; bottom: 2px;
+  width: 86%; height: 10px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, var(--bloom) 0%, transparent 70%);
+  opacity: 0;
+  filter: blur(4px);
+  transition: opacity .2s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.slot.running .icon-wrap::after { opacity: 0.85; }
+.slot[data-kind="app"]:hover .icon-wrap::after,
+.slot[data-kind="folder"]:hover .icon-wrap::after,
+.slot[data-kind="recent"]:hover .icon-wrap::after {
+  background: radial-gradient(ellipse, var(--bloom-hot) 0%, transparent 70%);
+  opacity: 1;
+}
+
 .slot img.app-icon,
 .slot canvas.app-icon {
   display: block;
   width: var(--is, 52px);
   height: var(--is, 52px);
   border-radius: 23%;
-  filter: drop-shadow(0 2px 7px rgba(0, 0, 0, 0.20));
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.22));
   transform-origin: bottom center;
-  /* P2-F2：不再 transition transform —— lift 由 JS 弹簧每帧写入，CSS 过渡会造成
-     双驱动滞后；filter 过渡保留（hover 阴影加深仍平滑） */
-  transition: filter .15s ease;
+  position: relative;
+  z-index: 1;
+  transition: filter .18s ease;
 }
 
-/* 图标倒影（macOS 经典观感）：仅底部 Dock，倒影向下淡出。
-   实拍发现 0.15 白遮罩在深色玻璃上不可见，提亮到 0.32 并提前渐入 */
 html[data-pos="bottom"] .slot img.app-icon,
 html[data-pos="bottom"] .slot canvas.app-icon {
-  -webkit-box-reflect: below 2px linear-gradient(transparent 52%, rgba(255, 255, 255, 0.32));
+  -webkit-box-reflect: below 2px linear-gradient(transparent 48%, rgba(255, 255, 255, 0.34));
 }
 
 .slot.recent-slot img.app-icon { border-radius: 13%; }
 .slot.min-slot img.app-icon { border-radius: 13%; }
 
-/* 图标统一浅色底板（全员式）：
-   macOS 观感的核心是「所有图标都是统一 squircle 容器」，而非只给深色图标补板 ——
-   检测式（亮度/透明占比）不断漏判彩色满幅图标（千问/豆包/CC Switch/PowerShell，
-   用户两轮反馈），改为全员加板、仅废纸篓排除（拟物自绘，不装板）。
-   padding 内缩图标内容，底板由背景层承担，随放大等比缩放；
-   下限 3px 保住静止 36px 时的可见性（白板时隐时现反馈） */
 .slot img.app-icon {
   box-sizing: border-box;
   padding: max(10%, 3px);
-  background: linear-gradient(to bottom, #fafafc, #e9eaef);
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.10), 0 1.5px 4px rgba(0, 0, 0, 0.22);
+  background: linear-gradient(165deg, var(--plate-from), var(--plate-to));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 0 0.5px var(--plate-edge),
+    0 2px 6px rgba(0, 0, 0, 0.18),
+    0 8px 16px rgba(0, 0, 0, 0.08);
 }
 
 .slot[data-kind="trash"] img.app-icon {
@@ -135,89 +210,68 @@ html[data-pos="bottom"] .slot canvas.app-icon {
   outline-offset: 2px;
 }
 
-/* P1-F2 键盘导航焦点态：1.15x 放大 + 圆角焦点环（与 :focus 环区分靠更粗描边） */
 .slot.kbd-focus img.app-icon {
   transform: scale(1.15);
   outline: 2.5px solid rgba(120,180,255,.95);
   outline-offset: 3px;
 }
 
-/* 通知角标（从窗口标题括号计数提取，如微信 "微信 (3)"） */
 .slot .badge {
   position: absolute;
-  top: -5px;
-  right: -7px;
-  min-width: 17px;
-  height: 17px;
+  top: -5px; right: -7px;
+  min-width: 17px; height: 17px;
   padding: 0 4px;
   box-sizing: border-box;
   border-radius: 9px;
-  background: linear-gradient(to bottom, #ff5f57, #e82c1f);
-  border: 1px solid rgba(255, 255, 255, .7);
-  box-shadow: 0 1.5px 4px rgba(0, 0, 0, .35);
+  background: linear-gradient(to bottom, #ff6b63, #e0261a);
+  border: 1.5px solid rgba(255, 255, 255, .85);
+  box-shadow: 0 2px 6px rgba(200, 30, 20, 0.45), 0 0 0 1px rgba(0,0,0,.08);
   color: #fff;
-  font-size: 10.5px;
-  font-weight: 600;
-  line-height: 15px;
-  text-align: center;
-  pointer-events: none;
-  display: none;
+  font-size: 10.5px; font-weight: 600; line-height: 14px;
+  text-align: center; pointer-events: none; display: none; z-index: 3;
 }
 .slot .badge.on { display: block; }
 
-/* 下载/传输进度环：包住图标，conic-gradient 扫过 */
 .slot .progress-ring {
-  position: absolute;
-  inset: -2px;
-  border-radius: 24%;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity .2s ease;
+  position: absolute; inset: -2px; border-radius: 24%;
+  pointer-events: none; opacity: 0; transition: opacity .2s ease;
   background: conic-gradient(
-    rgba(80, 180, 255, 0.92) 0deg,
-    rgba(80, 180, 255, 0.92) var(--deg, 0deg),
-    rgba(255, 255, 255, 0.18) var(--deg, 0deg),
-    rgba(255, 255, 255, 0.18) 360deg
+    rgba(100, 190, 255, 0.95) 0deg,
+    rgba(100, 190, 255, 0.95) var(--deg, 0deg),
+    rgba(255, 255, 255, 0.16) var(--deg, 0deg),
+    rgba(255, 255, 255, 0.16) 360deg
   );
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
   mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
   z-index: 2;
+  filter: drop-shadow(0 0 4px rgba(80, 180, 255, 0.5));
 }
 .slot .progress-ring.on { opacity: 1; }
 
 .slot .running-dot {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: -4px;
-  width: max(5.5px, calc(var(--is, 52px) * 0.11));
-  height: max(5.5px, calc(var(--is, 52px) * 0.11));
-  border-radius: 50%;
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: -4px;
+  width: max(6px, calc(var(--is, 52px) * 0.12));
+  height: max(3px, calc(var(--is, 52px) * 0.055));
+  border-radius: 999px;
   background: var(--dot-color);
-  /* 白描边 + 更实的投影：深色玻璃上肉眼可辨（实拍 4px 无描边几乎不可见） */
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55), 0 1px 3px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55), 0 0 8px var(--dot-glow), 0 1px 3px rgba(0, 0, 0, 0.4);
   opacity: 0;
   transition: opacity .25s ease, transform .15s ease;
 }
 .slot.running .running-dot { opacity: 1; }
-/* P2-F2 运行指示点开关（macOS 设置项）：关=整体不渲染 */
 html.no-indicators .slot .running-dot { display: none; }
 
-/* 活动指示：应用新开窗口时图标短暂泛蓝光 */
 @keyframes app-glow {
-  0%, 100% { filter: drop-shadow(0 2px 7px rgba(0, 0, 0, 0.20)); }
-  40% { filter: drop-shadow(0 2px 14px rgba(120, 180, 255, 0.90)); }
+  0%, 100% { filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.22)); }
+  40% { filter: drop-shadow(0 0 16px rgba(120, 190, 255, 0.95)); }
 }
 .slot.active-glow img.app-icon { animation: app-glow .7s ease; }
 
-/* 悬停微交互：图标轻微上浮 + 阴影加深（macOS 的贴近反馈），仅限可点槽 */
 .slot[data-kind="app"]:hover img.app-icon,
 .slot[data-kind="folder"]:hover img.app-icon,
 .slot[data-kind="recent"]:hover img.app-icon {
-  transform: translateY(-2px);
-  filter: drop-shadow(0 4px 9px rgba(0, 0, 0, 0.28));
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.32)) drop-shadow(0 0 10px var(--bloom));
 }
-
 /* 分隔线（apps | recents/minimized | trash 区）*/
 .divider-slot { display:flex; align-items:center; }
 /* P1-F3：主分隔线可拖拽调宽，hover 光标按 Dock 方向提示 */
@@ -227,11 +281,13 @@ html.no-indicators .slot .running-dot { display: none; }
   align-self: stretch;
   margin: 11px 8px;
   background: linear-gradient(to bottom,
-    transparent, rgba(0,0,0,0.30) 25%, rgba(0,0,0,0.30) 75%, transparent);
+    transparent, rgba(255,255,255,0.55) 20%, rgba(255,255,255,0.55) 80%, transparent);
+  box-shadow: 0 0 6px rgba(255,255,255,0.25);
 }
 html.dark .divider {
   background: linear-gradient(to bottom,
-    transparent, rgba(255,255,255,0.42) 22%, rgba(255,255,255,0.42) 78%, transparent);
+    transparent, rgba(255,255,255,0.4) 22%, rgba(255,255,255,0.4) 78%, transparent);
+  box-shadow: 0 0 8px rgba(140,180,255,0.2);
 }
 
 /* 启动弹跳：两轮衰减（macOS 观感），JS 就绪后移除类；侧栏横跳同步 */

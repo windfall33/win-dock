@@ -119,6 +119,13 @@ export function appearanceChanged(mode) {
   document.documentElement.classList.toggle('dark', dark);
 }
 
+/** dockTheme: glass（默认签名）| classic（旧朴素）| obsidian（深色高定） */
+export function applyDockTheme(theme) {
+  const t = theme === 'classic' || theme === 'obsidian' ? theme : 'glass';
+  document.documentElement.classList.toggle('theme-classic', t === 'classic');
+  document.documentElement.classList.toggle('theme-obsidian', t === 'obsidian');
+}
+
 // =====================================================================
 //  图标兜底：字母磁贴 + 废纸篓矢量图标
 // =====================================================================

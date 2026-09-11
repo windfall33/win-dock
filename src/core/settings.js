@@ -10,6 +10,7 @@ const DEFAULTS = {
   position: 'bottom',    // Dock 位置：bottom | left | right
   launchAtLogin: false,  // 开机自启
   appearance: 'system',  // light | dark | system
+  dockTheme: 'glass',    // glass（签名玻璃）| classic（朴素）| obsidian（黑曜石，配合深色）
   hideTaskbar: false,    // 隐藏 Windows 任务栏
   showTopbar: true,      // 顶部菜单栏（关闭可省一个渲染进程约 50MB）
   multidisplay: false,   // 多显示器：跟随鼠标所在屏幕

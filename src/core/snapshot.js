@@ -198,6 +198,7 @@ function createSnapshotBuilder(deps) {
         keepVisible: !!s.keepVisible,
         dockPerDisplay: !!s.dockPerDisplay,
         appearance: s.appearance,
+        dockTheme: s.dockTheme || 'glass',
         hideTaskbar: !!s.hideTaskbar,
         position: s.position || 'bottom',
         minimizeEffect: s.minimizeEffect || 'genie',

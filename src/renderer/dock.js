@@ -6,7 +6,7 @@
    ===================================================================== */
 import {
   S, barEl, applyPosClass, syncCssVars, appearanceChanged, reconcile, applyEnv,
-  registerHooks, isVert,
+  registerHooks, isVert, applyDockTheme,
 } from './state.js';
 import { requestLayout, ensureRaf } from './layout.js';
 import { closeMenu } from './menus.js';
@@ -32,6 +32,7 @@ window.dock.onSettings((s) => {
   syncCssVars();
   syncAutohideTimer();
   appearanceChanged(s.appearance);
+  applyDockTheme(s.dockTheme);
   requestLayout();
 });
 
@@ -58,6 +59,7 @@ async function init() {
   if (S.STATE && S.STATE.settings && S.STATE.settings.position) S.POS = S.STATE.settings.position;
   applyPosClass();
   appearanceChanged((S.STATE && S.STATE.settings && S.STATE.settings.appearance) || 'system');
+  applyDockTheme((S.STATE && S.STATE.settings && S.STATE.settings.dockTheme) || 'glass');
   syncCssVars();
   reconcile();
   ensureRaf();

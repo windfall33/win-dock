@@ -37,6 +37,7 @@ function render(s) {
   $('#workareaReserve').classList.toggle('on', !!s.workareaReserve);
   $('#minimizeIntoIcon').classList.toggle('on', !!s.minimizeIntoIcon);
   $('#appearance').value = s.appearance || 'system';
+  $('#dockTheme').value = s.dockTheme || 'glass';
   $('#position').value = s.position || 'bottom';
   $('#minimizeEffect').value = s.minimizeEffect || 'genie';
   document.documentElement.classList.toggle('dark',
@@ -156,6 +157,9 @@ $('#workareaReserve').addEventListener('click', () => {
 });
 $('#appearance').addEventListener('change', (e) => {
   window.dock.invoke('set-setting', { key: 'appearance', value: e.target.value });
+});
+$('#dockTheme').addEventListener('change', (e) => {
+  window.dock.invoke('set-setting', { key: 'dockTheme', value: e.target.value });
 });
 $('#position').addEventListener('change', (e) => {
   window.dock.invoke('set-setting', { key: 'position', value: e.target.value });

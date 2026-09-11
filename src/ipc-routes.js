@@ -8,7 +8,7 @@ const { createPinRoutes } = require('./ipc-pin-routes.js');
 const { createPinApp } = require('./core/pin-app.js');
 
 // set-setting 白名单：允许渲染层通过 IPC 写入的设置项
-const SETTING_KEYS = ['iconSize', 'magnification', 'autohide', 'position', 'launchAtLogin', 'appearance', 'hideTaskbar', 'showTopbar', 'multidisplay', 'occludeAway', 'minimizeEffect', 'minimizeIntoIcon', 'workareaReserve', 'keepVisible', 'showIndicators', 'showRecents', 'dockPerDisplay', 'staticOnly', 'scrollToOpen', 'springLoadApps', 'showDelayMs', 'hideDelayMs'];
+const SETTING_KEYS = ['iconSize', 'magnification', 'autohide', 'position', 'launchAtLogin', 'appearance', 'hideTaskbar', 'showTopbar', 'multidisplay', 'occludeAway', 'minimizeEffect', 'minimizeIntoIcon', 'workareaReserve', 'keepVisible', 'showIndicators', 'showRecents', 'dockPerDisplay', 'staticOnly', 'scrollToOpen', 'springLoadApps', 'showDelayMs', 'hideDelayMs', 'dockTheme'];
 
 function createIpcRoutes(ctx) {
   const { log } = ctx;
@@ -416,6 +416,7 @@ function createIpcRoutes(ctx) {
       magnification: ctx.settings.get('magnification'),
       autohide: ctx.settings.get('autohide'),
       appearance: ctx.settings.get('appearance'),
+      dockTheme: ctx.settings.get('dockTheme') || 'glass',
       hideTaskbar: ctx.settings.get('hideTaskbar'),
       showTopbar: ctx.settings.get('showTopbar'),
       multidisplay: ctx.settings.get('multidisplay'),
